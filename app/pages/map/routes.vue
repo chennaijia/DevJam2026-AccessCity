@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, origin } = usePlanning()
+const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, chipNeeds, origin } = usePlanning()
 const { user } = useSession()
 
 if (!routes.value.length) {
@@ -7,7 +7,7 @@ if (!routes.value.length) {
   routes.value = await api.getRoutes(
     destination.value || '台大醫院',
     user.value?.needs ?? [],
-    todayNeeds.value,
+    [...todayNeeds.value, ...chipNeeds.value],
     origin.value,
   )
 }

@@ -16,6 +16,9 @@ export function usePlanning() {
     () => routes.value.find((r) => r.id === selectedRouteId.value) ?? routes.value[1] ?? routes.value[0],
   )
 
+  /** Mimo 解析出的 chips（除了 destination）要一起送進 /api/routes，不然「避開施工」之類的需求永遠到不了後端 */
+  const chipNeeds = computed(() => chips.value.map((c) => c.key).filter((k) => k !== 'destination'))
+
   function toggleTodayNeed(key: string) {
     todayNeeds.value = todayNeeds.value.includes(key)
       ? todayNeeds.value.filter((k) => k !== key)
@@ -56,6 +59,7 @@ export function usePlanning() {
   return {
     destination,
     chips,
+    chipNeeds,
     routes,
     selectedRouteId,
     selectedRoute,

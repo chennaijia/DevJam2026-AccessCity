@@ -3,7 +3,7 @@
  * AI Requirement Confirmation（企劃書 §6）
  * 使用者說一句話 → Requirement Agent 拆成 chips → 確認後才開始規劃路線。
  */
-const { destination, chips, routes, todayNeeds, resolveOrigin } = usePlanning()
+const { destination, chips, chipNeeds, routes, todayNeeds, resolveOrigin } = usePlanning()
 const { user } = useSession()
 const route = useRoute()
 const { listen, listening, canListen, speak } = useSpeech()
@@ -49,7 +49,12 @@ function removeChip(key: string) {
 async function startNavigation() {
   // TODO: 串接後端 —— GET /api/routes?destination=&needs=&today=
   const origin = await resolveOrigin()
-  routes.value = await api.getRoutes(destination.value, user.value?.needs ?? [], todayNeeds.value, origin)
+  routes.value = await api.getRoutes(
+    destination.value,
+    user.value?.needs ?? [],
+    [...todayNeeds.value, ...chipNeeds.value],
+    origin,
+  )
   await navigateTo('/map/routes')
 }
 

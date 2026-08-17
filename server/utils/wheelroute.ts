@@ -58,23 +58,38 @@ interface FacilityPoint {
 }
 
 const cache = new Map<number, { points: FacilityPoint[]; cachedAt: number }>()
+// 好幾條路線同時檢查時，快取還沒寫回去，大家都會覺得快取是空的——
+// 用 in-flight promise 讓同一個 kind 的並行請求共用同一次抓取，不然會重複打好幾次 API
+const inFlight = new Map<number, Promise<FacilityPoint[]>>()
 
 async function getFacilities(kind: number): Promise<FacilityPoint[]> {
   const cached = cache.get(kind)
   if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) return cached.points
 
-  const raw = await $fetch<RawFacility[]>(`${BASE_URL}/${kind}`)
-  const points: FacilityPoint[] = raw
-    .map((r) => ({
-      lat: Number(r.lat),
-      lon: Number(r.lon),
-      name: r.kname?.split('-')[0]?.trim() || '',
-    }))
-    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && p.lat !== 0 && p.lon !== 0)
+  const pending = inFlight.get(kind)
+  if (pending) return pending
 
-  cache.set(kind, { points, cachedAt: Date.now() })
-  renderProgress(kind, points.length)
-  return points
+  const fetchPromise = (async () => {
+    const raw = await $fetch<RawFacility[]>(`${BASE_URL}/${kind}`)
+    const points: FacilityPoint[] = raw
+      .map((r) => ({
+        lat: Number(r.lat),
+        lon: Number(r.lon),
+        name: r.kname?.split('-')[0]?.trim() || '',
+      }))
+      .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && p.lat !== 0 && p.lon !== 0)
+
+    cache.set(kind, { points, cachedAt: Date.now() })
+    renderProgress(kind, points.length)
+    return points
+  })()
+
+  inFlight.set(kind, fetchPromise)
+  try {
+    return await fetchPromise
+  } finally {
+    inFlight.delete(kind)
+  }
 }
 
 /** 台北市大致範圍，超出這個範圍就不用這份資料判斷 */

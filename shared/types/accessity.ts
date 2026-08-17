@@ -82,6 +82,7 @@ export interface RouteOption {
   safetyScore?: number
   distanceMeters?: number
   encodedPolyline?: string
+  constructionConflicts?: ConstructionZone[]
   steps: RouteStep[]
 }
 
