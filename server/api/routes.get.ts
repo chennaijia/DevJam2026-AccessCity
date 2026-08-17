@@ -1,5 +1,5 @@
 import type { RouteOption, RouteStep } from '#shared/types/accessity'
-import { checkRouteAccessibilityCoverage, findNearbyAmenities } from '../utils/wheelroute'
+import { checkRouteAccessibilityCoverage, findNearbyAmenities, findRouteAccessibilityFacilities } from '../utils/wheelroute'
 import { checkRouteConstructionConflicts, findBlockingHit } from '../utils/construction'
 import { decodePolyline, destinationPoint } from '../utils/geo'
 import { planRoutes } from '../utils/routePlanner'
@@ -65,6 +65,7 @@ function appendReason(option: RouteOption, text: string) {
  * 只涵蓋台北市，範圍外查不到資料就不判斷（維持原本的 badge）。
  */
 async function applyAccessibilityCheck(option: RouteOption): Promise<RouteOption> {
+  option.accessibilityFacilities = await findRouteAccessibilityFacilities(option.encodedPolyline)
   const coverage = await checkRouteAccessibilityCoverage(option.encodedPolyline)
   if (coverage.checked) {
     option.accessibilityScore = Math.round(coverage.coverage * 100)

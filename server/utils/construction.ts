@@ -121,27 +121,37 @@ export async function checkRouteConstructionConflicts(encodedPolyline?: string):
 
   const sites = await getConstructionSites()
   // 同一個工程編號（groupId）可能拆成好幾筆 feature，只留一筆代表——如果其中有任何一段是完全封閉，優先保留那筆
-  const matchedByGroup = new Map<string, ConstructionSite>()
+  const matchedByGroup = new Map<string, { site: ConstructionSite; point: [number, number] }>()
 
   for (const site of sites) {
-    const isNearby = routePoints.some((rp) =>
-      site.points.some((sp) => haversineMeters(rp, sp) <= CONSTRUCTION_RADIUS_M),
-    )
-    if (!isNearby) continue
+    // 順便記下離路線最近的那個施工點座標，地圖上的吉祥物 icon 才有位置可以放
+    let nearestPoint: [number, number] | null = null
+    let nearestDistance = Infinity
+    for (const rp of routePoints) {
+      for (const sp of site.points) {
+        const d = haversineMeters(rp, sp)
+        if (d <= CONSTRUCTION_RADIUS_M && d < nearestDistance) {
+          nearestDistance = d
+          nearestPoint = sp
+        }
+      }
+    }
+    if (!nearestPoint) continue
 
     const existing = matchedByGroup.get(site.groupId)
-    if (!existing || (site.blocking && !existing.blocking)) {
-      matchedByGroup.set(site.groupId, site)
+    if (!existing || (site.blocking && !existing.site.blocking)) {
+      matchedByGroup.set(site.groupId, { site, point: nearestPoint })
     }
   }
 
-  const result = [...matchedByGroup.values()].map((site) => ({
+  const result = [...matchedByGroup.values()].map(({ site, point }) => ({
     id: site.groupId,
     road: site.road,
     section: site.section,
     until: site.until,
     severity: site.blocking ? ('blocked' as const) : ('narrowed' as const),
     note: site.note,
+    location: { lat: point[0], lng: point[1] },
   }))
 
   const blockedCount = result.filter((c) => c.severity === 'blocked').length

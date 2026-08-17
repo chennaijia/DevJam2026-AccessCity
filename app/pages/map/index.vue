@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { destination, planTo } = usePlanning()
+const { destination, planTo, todayNeeds, toggleTodayNeed } = usePlanning()
 const { listen, listening, canListen } = useSpeech()
 
 const filters = [
@@ -7,12 +7,12 @@ const filters = [
   { key: 'coolest', label: 'Coolest' },
   { key: 'safety', label: 'Safety' },
 ]
-const active = ref<string[]>(['wheelchair'])
+// safety 對應到後端既有的 avoid-construction 需求 key（跟「今天想避開施工」是同一個判斷邏輯）
+const FILTER_TO_NEED: Record<string, string> = { wheelchair: 'wheelchair', coolest: 'coolest', safety: 'avoid-construction' }
+const active = computed(() => filters.map((f) => f.key).filter((k) => todayNeeds.value.includes(FILTER_TO_NEED[k]!)))
 
 function toggleFilter(key: string) {
-  active.value = active.value.includes(key)
-    ? active.value.filter((k) => k !== key)
-    : [...active.value, key]
+  toggleTodayNeed(FILTER_TO_NEED[key]!)
 }
 
 /** 語音輸入：聽一句話 → 直接帶進 Requirement Agent */

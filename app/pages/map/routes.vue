@@ -20,6 +20,22 @@ const showComparison = computed(
   () => !!baselineRoute.value && baselineRoute.value.id !== selectedRoute.value?.id,
 )
 
+// 勾 Safety 才在地圖上標施工地點；勾 Wheelchair 才標無障礙通行點——沒勾就不顯示，維持原本畫面乾淨
+const showSafetyMarkers = computed(() => todayNeeds.value.includes('avoid-construction'))
+const showWheelchairMarkers = computed(() => todayNeeds.value.includes('wheelchair'))
+const constructionMarkers = computed(() =>
+  showSafetyMarkers.value
+    ? (selectedRoute.value?.constructionConflicts ?? [])
+        .filter((c) => c.location)
+        .map((c) => ({ lat: c.location!.lat, lng: c.location!.lng, label: c.section }))
+    : [],
+)
+const facilityMarkers = computed(() =>
+  showWheelchairMarkers.value
+    ? (selectedRoute.value?.accessibilityFacilities ?? []).map((f) => ({ lat: f.lat, lng: f.lng, label: f.name }))
+    : [],
+)
+
 async function go() {
   // TODO: 串接後端 —— POST /api/trips { destination, routeId }（開始行程並開始回傳位置）
   await api.startTrip(destination.value, selectedRouteId.value)
@@ -38,7 +54,9 @@ async function go() {
       show-route
       :route-polyline="selectedRoute?.encodedPolyline"
       :compare-polyline="showComparison ? baselineRoute?.encodedPolyline : undefined"
-      :show-construction="routes.some((r) => r.constructionConflicts?.length)"
+      :show-construction="showSafetyMarkers"
+      :construction-markers="constructionMarkers"
+      :facility-markers="facilityMarkers"
       class="map"
       :markers="[
         { x: 16, y: 88, label: '', tone: 'teal' },
