@@ -65,11 +65,8 @@ async function startPlanning() {
           <AppIcon name="mic" :size="20" />
         </button>
       </div>
-      <p class="muted" style="padding-left: 6px">
-        {{ listening ? '聽你說…' : '可以這樣說：「找捷運站附近有斜坡道的路」' }}
-      </p>
 
-      <div class="row" style="flex-wrap: wrap">
+      <div class="row map-home__filters" style="flex-wrap: wrap">
         <UiChip
           v-for="f in filters"
           :key="f.key"
@@ -82,7 +79,7 @@ async function startPlanning() {
         </UiChip>
       </div>
 
-      <div v-if="savedPlaces?.length" class="row" style="flex-wrap: wrap">
+      <div v-if="savedPlaces?.length" class="row map-home__filters" style="flex-wrap: wrap">
         <UiChip
           v-for="p in savedPlaces"
           :key="p.id"
@@ -128,10 +125,15 @@ async function startPlanning() {
 .map-home__bottom {
   position: relative;
   margin-top: auto;
-  padding: 16px 16px 104px;
+  padding: 16px 16px 8px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.map-home__filters :deep(.chip) {
+  padding: 4px 10px;
+  font-size: 11px;
 }
 
 .search {
