@@ -1,17 +1,24 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, chipNeeds, origin } = usePlanning()
+const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, chipNeeds, ignoreProfileNeeds, origin } =
+  usePlanning()
 const { user } = useSession()
 
 if (!routes.value.length) {
   // TODO: 串接後端 —— GET /api/routes?destination=&needs=
   routes.value = await api.getRoutes(
     destination.value || '台大醫院',
-    user.value?.needs ?? [],
+    ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
     [...todayNeeds.value, ...chipNeeds.value],
     origin.value,
   )
 }
 selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
+
+/** Google 原本給的第一條路線，沒套用任何無障礙／施工考量，拿來跟目前選的路線做視覺比較 */
+const baselineRoute = computed(() => routes.value.find((r) => !r.id.includes('-detour')) ?? routes.value[0])
+const showComparison = computed(
+  () => !!baselineRoute.value && baselineRoute.value.id !== selectedRoute.value?.id,
+)
 
 async function go() {
   // TODO: 串接後端 —— POST /api/trips { destination, routeId }（開始行程並開始回傳位置）
@@ -30,6 +37,7 @@ async function go() {
       height="270px"
       show-route
       :route-polyline="selectedRoute?.encodedPolyline"
+      :compare-polyline="showComparison ? baselineRoute?.encodedPolyline : undefined"
       :show-construction="routes.some((r) => r.constructionConflicts?.length)"
       class="map"
       :markers="[
@@ -40,6 +48,10 @@ async function go() {
       <div class="map__chips">
         <UiChip tone="plain"><AppIcon name="pin" :size="15" /> Current Location</UiChip>
         <button class="layers" aria-label="圖層"><AppIcon name="layers" :size="18" /></button>
+      </div>
+      <div v-if="showComparison" class="map__legend">
+        <span class="map__legend-item"><i class="map__legend-line map__legend-line--solid" />目前選擇的路線</span>
+        <span class="map__legend-item"><i class="map__legend-line map__legend-line--dashed" />原始 Google 路線（未套用考量）</span>
       </div>
     </MapCanvas>
 
@@ -130,6 +142,44 @@ async function go() {
   display: flex;
   justify-content: space-between;
   padding: 12px;
+}
+
+.map__legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-card);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.map__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map__legend-line {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 3px solid;
+}
+
+.map__legend-line--solid {
+  border-color: #0b5f5c;
+}
+
+.map__legend-line--dashed {
+  border-color: #9a978d;
+  border-top-style: dashed;
 }
 
 .layers {

@@ -8,6 +8,8 @@ const props = withDefaults(
     showConstruction?: boolean
     showPark?: boolean
     routePolyline?: string
+    /** 拿來比較用的第二條路線（例如沒套用任何無障礙/施工考量的原始 Google 路線），用灰色虛線畫 */
+    comparePolyline?: string
     markers?: { x: number; y: number; label?: string; tone?: 'teal' | 'red' | 'green' }[]
   }>(),
   { height: '220px', showPark: true, markers: () => [] },
@@ -18,6 +20,7 @@ const mapElement = ref<HTMLElement>()
 const loadError = ref('')
 let map: any
 let routeLine: any
+let compareLine: any
 let currentMarker: any
 
 declare global {
@@ -48,7 +51,31 @@ function loadGoogleMaps() {
 function drawRoute(maps: any) {
   routeLine?.setMap(null)
   routeLine = null
+  compareLine?.setMap(null)
+  compareLine = null
   if (!map || !props.routePolyline) return
+
+  const bounds = new maps.LatLngBounds()
+
+  // 比較用的原始路線先畫，灰色虛線墊在下面，主路線蓋在上面才看得清楚
+  if (props.comparePolyline && props.comparePolyline !== props.routePolyline) {
+    const comparePath = maps.geometry.encoding.decodePath(props.comparePolyline)
+    compareLine = new maps.Polyline({
+      map,
+      path: comparePath,
+      strokeOpacity: 0,
+      icons: [
+        {
+          icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.9, scale: 3 },
+          offset: '0',
+          repeat: '14px',
+        },
+      ],
+      strokeColor: '#9a978d',
+      zIndex: 1,
+    })
+    comparePath.forEach((point: any) => bounds.extend(point))
+  }
 
   const path = maps.geometry.encoding.decodePath(props.routePolyline)
   routeLine = new maps.Polyline({
@@ -57,8 +84,8 @@ function drawRoute(maps: any) {
     strokeColor: '#0b5f5c',
     strokeOpacity: 1,
     strokeWeight: 6,
+    zIndex: 2,
   })
-  const bounds = new maps.LatLngBounds()
   path.forEach((point: any) => bounds.extend(point))
   map.fitBounds(bounds, 44)
 }
@@ -96,7 +123,7 @@ onMounted(async () => {
 })
 
 watch(
-  () => props.routePolyline,
+  [() => props.routePolyline, () => props.comparePolyline],
   async () => {
     if (map && window.google?.maps) drawRoute(window.google.maps)
   },
@@ -104,6 +131,7 @@ watch(
 
 onBeforeUnmount(() => {
   routeLine?.setMap(null)
+  compareLine?.setMap(null)
   currentMarker?.setMap(null)
 })
 </script>

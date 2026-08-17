@@ -11,6 +11,8 @@ export function usePlanning() {
   const selectedRouteId = useState<string>('accessity:selected-route', () => '')
   const todayNeeds = useState<string[]>('accessity:today-needs', () => [])
   const origin = useState<{ lat: number; lng: number } | null>('accessity:route-origin', () => null)
+  /** 測試用：開了就不送帳號設定裡的固定 needs（例如輪椅），只送這次對話解析出的 chips，方便單獨測某一項 */
+  const ignoreProfileNeeds = useState<boolean>('accessity:ignore-profile-needs', () => false)
 
   const selectedRoute = computed(
     () => routes.value.find((r) => r.id === selectedRouteId.value) ?? routes.value[1] ?? routes.value[0],
@@ -65,6 +67,7 @@ export function usePlanning() {
     selectedRoute,
     todayNeeds,
     origin,
+    ignoreProfileNeeds,
     resolveOrigin,
     toggleTodayNeed,
     planTo,
