@@ -92,6 +92,9 @@ async function startVoice() {
       </div>
     </UiCard>
 
+    <!-- 現在位置的地圖：抓瀏覽器定位、標出目前位置 -->
+    <MapCanvas height="180px" class="location-map" />
+
     <!-- 主要行動：說出目的地 -->
     <div class="stack-sm">
       <button class="ask" type="button" @click="navigateTo('/map/plan')">
@@ -204,6 +207,10 @@ async function startVoice() {
   color: var(--teal);
   display: grid;
   place-items: center;
+}
+
+.location-map {
+  box-shadow: var(--shadow-card);
 }
 
 .share-row {
