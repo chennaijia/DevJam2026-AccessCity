@@ -21,17 +21,17 @@ async function go() {
 </script>
 
 <template>
-  <section class="screen screen--flush">
-    <div style="padding: 12px 16px 0">
+  <section class="screen screen--flush routes">
+    <div class="routes__header">
       <ScreenHeader title="Accessity" back="/map/plan" />
     </div>
 
     <MapCanvas
-      height="270px"
+      height="100%"
+      class="routes__map"
       show-route
       :route-polyline="selectedRoute?.encodedPolyline"
       :show-construction="routes.some((r) => r.constructionConflicts?.length)"
-      class="map"
       :markers="[
         { x: 16, y: 88, label: '', tone: 'teal' },
         { x: 69, y: 20, label: '', tone: 'green' },
@@ -43,9 +43,10 @@ async function go() {
       </div>
     </MapCanvas>
 
-    <div class="sheet">
-      <div class="sheet__grabber" />
-      <h2 class="title-md" style="margin-bottom: 4px">Suggested Routes</h2>
+    <BottomSheet :snap-points="[0.42, 0.9]">
+      <template #header>
+        <h2 class="title-md">Suggested Routes</h2>
+      </template>
 
       <div class="stack">
         <UiCard
@@ -110,26 +111,45 @@ async function go() {
       </div>
 
       <div class="note">It's 4 mins longer, but you can definitely reach this one!</div>
-    </div>
 
-    <div class="footer">
-      <UiButton @click="go">
-        <AppIcon name="walk" :size="18" />
-        Go with Safety
-      </UiButton>
-    </div>
+      <template #footer>
+        <UiButton @click="go">
+          <AppIcon name="walk" :size="18" />
+          Go with Safety
+        </UiButton>
+      </template>
+    </BottomSheet>
   </section>
 </template>
 
 <style scoped>
-.map {
+.routes {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.routes__map {
+  position: absolute;
+  inset: 0;
   border-radius: 0;
+}
+
+.routes__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, var(--bg) 55%, rgba(247, 246, 242, 0));
 }
 
 .map__chips {
   display: flex;
   justify-content: space-between;
-  padding: 12px;
+  /* 讓開浮在上面的標題列 */
+  padding: 64px 12px 12px;
 }
 
 .layers {
@@ -139,24 +159,6 @@ async function go() {
   border: 2px solid var(--line);
   background: var(--surface);
   cursor: pointer;
-}
-
-.sheet {
-  flex: 1;
-  background: var(--bg);
-  border-radius: 20px 20px 0 0;
-  margin-top: -14px;
-  padding: 12px 16px 100px;
-  position: relative;
-  z-index: 2;
-}
-
-.sheet__grabber {
-  width: 46px;
-  height: 5px;
-  border-radius: 999px;
-  background: #d3d1c9;
-  margin: 0 auto 12px;
 }
 
 .warn {
@@ -200,17 +202,5 @@ async function go() {
   font-size: 13px;
   font-weight: 700;
   transform: rotate(-2deg);
-}
-
-.footer {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: var(--screen-w);
-  padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, rgba(247, 246, 242, 0), var(--bg) 30%);
-  z-index: 20;
 }
 </style>
