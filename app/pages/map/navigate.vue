@@ -1,11 +1,15 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, selectedRoute } = usePlanning()
+const { destination, routes, selectedRouteId, selectedRoute, todayNeeds } = usePlanning()
 const { user } = useSession()
 
 // 直接進到導航頁（例如重新整理）時，補抓一次路線
 if (!routes.value.length) {
   // TODO: 串接後端 —— GET /api/routes?destination=&needs=
-  routes.value = await api.getRoutes(destination.value || '台大醫院', user.value?.needs ?? [])
+  routes.value = await api.getRoutes(
+    destination.value || '台大醫院',
+    user.value?.needs ?? [],
+    todayNeeds.value,
+  )
   selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
 }
 
@@ -71,7 +75,7 @@ async function endTrip() {
       </div>
     </div>
 
-    <SafetyOverlay />
+    <SafetyOverlay demo />
   </section>
 </template>
 

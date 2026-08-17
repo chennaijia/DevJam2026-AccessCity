@@ -37,8 +37,11 @@ export function useSession() {
     user.value = null
   }
 
-  /** 依角色決定登入後的首頁 */
-  const homePath = computed(() => (isCaregiver.value ? '/caregiver' : '/map'))
+  /**
+   * 登入後的落地頁：兩種角色都進 /home，
+   * /home 內部再依角色顯示照顧者儀表板或被照顧者主頁。
+   */
+  const homePath = computed(() => '/home')
 
   /** 套用歡迎頁選的身分（登入 / 註冊完成後呼叫） */
   async function applyPendingRole() {

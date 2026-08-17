@@ -8,6 +8,7 @@ import {
   mockFamily,
   mockMembers,
   mockNotificationSettings,
+  mockRecentTrips,
   mockRoutes,
   mockShelters,
   mockTrip,
@@ -22,6 +23,7 @@ import type {
   RouteOption,
   Shelter,
   Trip,
+  TripRecord,
   User,
   WeeklyOverview,
 } from '#shared/types/accessity'
@@ -34,6 +36,8 @@ interface Db {
   routes: RouteOption[]
   shelters: Shelter[]
   trip: Trip
+  recentTrips: TripRecord[]
+  todayNeeds: string[]
   overview: WeeklyOverview
   alerts: CareAlert[]
   settings: NotificationSettings
@@ -49,6 +53,8 @@ export const db: Db = {
   routes: structuredClone(mockRoutes),
   shelters: structuredClone(mockShelters),
   trip: structuredClone(mockTrip),
+  recentTrips: structuredClone(mockRecentTrips),
+  todayNeeds: [],
   overview: structuredClone(mockWeeklyOverview),
   alerts: structuredClone(mockAlerts),
   settings: structuredClone(mockNotificationSettings),

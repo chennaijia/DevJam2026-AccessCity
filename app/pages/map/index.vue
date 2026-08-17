@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { destination } = usePlanning()
+const { destination, planTo } = usePlanning()
 
 const filters = [
   { key: 'wheelchair', label: 'Wheelchair' },
@@ -21,7 +21,8 @@ function startVoice() {
 }
 
 async function startPlanning() {
-  await navigateTo('/map/plan')
+  // 搜尋框內容直接帶進 Requirement Agent
+  await planTo(destination.value)
 }
 </script>
 

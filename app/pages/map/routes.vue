@@ -1,10 +1,14 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId } = usePlanning()
+const { destination, routes, selectedRouteId, todayNeeds } = usePlanning()
 const { user } = useSession()
 
 if (!routes.value.length) {
   // TODO: 串接後端 —— GET /api/routes?destination=&needs=
-  routes.value = await api.getRoutes(destination.value || '台大醫院', user.value?.needs ?? [])
+  routes.value = await api.getRoutes(
+    destination.value || '台大醫院',
+    user.value?.needs ?? [],
+    todayNeeds.value,
+  )
 }
 selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
 
