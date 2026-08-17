@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, todayNeeds, origin } = usePlanning()
+const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, origin } = usePlanning()
 const { user } = useSession()
 
 if (!routes.value.length) {
@@ -29,6 +29,7 @@ async function go() {
     <MapCanvas
       height="270px"
       show-route
+      :route-polyline="selectedRoute?.encodedPolyline"
       :show-construction="routes.some((r) => r.constructionConflicts?.length)"
       class="map"
       :markers="[

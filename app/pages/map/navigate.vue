@@ -75,6 +75,7 @@ async function endTrip() {
     <MapCanvas
       height="100%"
       show-route
+      :route-polyline="selectedRoute?.encodedPolyline"
       :show-construction="!!conflicts.length"
       class="nav-screen__bg"
       :markers="[{ x: 70, y: 18, label: '', tone: 'teal' }]"
