@@ -23,17 +23,24 @@ async function send(text?: string) {
   input.value = ''
   thinking.value = true
 
-  // TODO: 串接後端 —— POST /api/agent/requirement { text }
-  //       後端的 Requirement Agent 回傳結構化條件 + 一句自然語言回覆
-  chips.value = await api.parseRequirement(content)
-  destination.value = chips.value.find((c) => c.key === 'destination')?.label ?? destination.value
+  try {
+    chips.value = await api.parseRequirement(content)
+    destination.value = chips.value.find((c) => c.key === 'destination')?.label ?? destination.value
 
-  messages.value.push({
-    id: Date.now() + 1,
-    from: 'mimo',
-    text: '我整理好你的需求了，確認一下就可以出發。',
-  })
-  thinking.value = false
+    messages.value.push({
+      id: Date.now() + 1,
+      from: 'mimo',
+      text: '我整理好你的需求了，確認一下就可以出發。',
+    })
+  } catch {
+    messages.value.push({
+      id: Date.now() + 1,
+      from: 'mimo',
+      text: '抱歉，我現在有點忙，請稍後再試一次。',
+    })
+  } finally {
+    thinking.value = false
+  }
 }
 
 function startVoice() {

@@ -38,7 +38,7 @@ import {
 } from '#shared/mock/data'
 
 /** TODO: 後端串接完成後改成 false（或改由 runtimeConfig.public 控制） */
-const USE_MOCK = true
+const USE_MOCK = false
 
 /** 模擬網路延遲，讓 loading 狀態在 demo 時看得出來 */
 function mock<T>(data: T, delay = 220): Promise<T> {
