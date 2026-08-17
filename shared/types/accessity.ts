@@ -70,6 +70,8 @@ export interface RouteOption {
   reason?: string
   accessibilityScore?: number
   safetyScore?: number
+  distanceMeters?: number
+  encodedPolyline?: string
   steps: RouteStep[]
 }
 

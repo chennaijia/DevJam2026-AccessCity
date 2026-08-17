@@ -10,6 +10,7 @@ export function usePlanning() {
   const routes = useState<RouteOption[]>('accessity:routes', () => [])
   const selectedRouteId = useState<string>('accessity:selected-route', () => '')
   const todayNeeds = useState<string[]>('accessity:today-needs', () => [])
+  const origin = useState<{ lat: number; lng: number } | null>('accessity:route-origin', () => null)
 
   const selectedRoute = computed(
     () => routes.value.find((r) => r.id === selectedRouteId.value) ?? routes.value[1] ?? routes.value[0],
@@ -39,6 +40,19 @@ export function usePlanning() {
     selectedRouteId.value = ''
   }
 
+  /** 在使用者操作後讀取一次起點；拒絕定位時由後端的預設起點接手。 */
+  async function resolveOrigin() {
+    if (origin.value || !import.meta.client || !navigator.geolocation) return origin.value
+    origin.value = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => resolve({ lat: coords.latitude, lng: coords.longitude }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 },
+      )
+    })
+    return origin.value
+  }
+
   return {
     destination,
     chips,
@@ -46,6 +60,8 @@ export function usePlanning() {
     selectedRouteId,
     selectedRoute,
     todayNeeds,
+    origin,
+    resolveOrigin,
     toggleTodayNeed,
     planTo,
     reset,

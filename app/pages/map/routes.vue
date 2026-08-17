@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, todayNeeds } = usePlanning()
+const { destination, routes, selectedRouteId, todayNeeds, origin } = usePlanning()
 const { user } = useSession()
 
 if (!routes.value.length) {
@@ -8,6 +8,7 @@ if (!routes.value.length) {
     destination.value || '台大醫院',
     user.value?.needs ?? [],
     todayNeeds.value,
+    origin.value,
   )
 }
 selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
@@ -25,7 +26,7 @@ async function go() {
       <ScreenHeader title="Accessity" back="/map/plan" />
     </div>
 
-    <MapCanvas height="270px" show-route class="map" :markers="[
+    <MapCanvas height="270px" show-route :route-polyline="routes.find((r) => r.id === selectedRouteId)?.encodedPolyline" class="map" :markers="[
       { x: 16, y: 88, label: '', tone: 'teal' },
       { x: 69, y: 20, label: '', tone: 'green' },
     ]">

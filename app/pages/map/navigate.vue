@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, selectedRoute, todayNeeds } = usePlanning()
+const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, origin } = usePlanning()
 const { user } = useSession()
 
 // 直接進到導航頁（例如重新整理）時，補抓一次路線
@@ -9,6 +9,7 @@ if (!routes.value.length) {
     destination.value || '台大醫院',
     user.value?.needs ?? [],
     todayNeeds.value,
+    origin.value,
   )
   selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
 }
@@ -42,7 +43,7 @@ async function endTrip() {
 
 <template>
   <section class="screen screen--flush nav-screen">
-    <MapCanvas height="100%" show-route class="nav-screen__bg" :markers="[
+    <MapCanvas height="100%" show-route :route-polyline="selectedRoute?.encodedPolyline" class="nav-screen__bg" :markers="[
       { x: 70, y: 18, label: '', tone: 'teal' },
     ]" />
 

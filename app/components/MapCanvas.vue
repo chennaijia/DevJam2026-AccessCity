@@ -1,75 +1,115 @@
 <script setup lang="ts">
-/**
- * 假地圖（demo 用的示意底圖）。街廓用 CSS 漸層鋪，所以在任何尺寸下都不會變形。
- * TODO: 串接 Google Maps —— 用 @googlemaps/js-api-loader 或 vue3-google-map 取代整個元件內容，
- *       路線 polyline 由 /api/routes 回傳的 encoded polyline 解出來畫，
- *       施工／淹水區塊由城市開放資料的 GeoJSON 疊圖。
- */
-withDefaults(
+const props = withDefaults(
   defineProps<{
     height?: string
     showRoute?: boolean
     showFlood?: boolean
     showPark?: boolean
+    routePolyline?: string
     markers?: { x: number; y: number; label?: string; tone?: 'teal' | 'red' | 'green' }[]
   }>(),
   { height: '220px', showPark: true, markers: () => [] },
 )
+
+const config = useRuntimeConfig()
+const mapElement = ref<HTMLElement>()
+const loadError = ref('')
+let map: any
+let routeLine: any
+let currentMarker: any
+
+declare global {
+  interface Window {
+    google?: any
+    __accessityGoogleMapsPromise?: Promise<any>
+  }
+}
+
+function loadGoogleMaps() {
+  if (window.google?.maps) return Promise.resolve(window.google.maps)
+  if (window.__accessityGoogleMapsPromise) return window.__accessityGoogleMapsPromise
+
+  const key = config.public.googleMapsKey
+  if (!key) return Promise.reject(new Error('尚未設定 NUXT_PUBLIC_GOOGLE_MAPS_KEY'))
+
+  window.__accessityGoogleMapsPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&language=zh-TW&region=TW`
+    script.async = true
+    script.onload = () => resolve(window.google.maps)
+    script.onerror = () => reject(new Error('Google Maps JavaScript API 載入失敗'))
+    document.head.appendChild(script)
+  })
+  return window.__accessityGoogleMapsPromise
+}
+
+function drawRoute(maps: any) {
+  routeLine?.setMap(null)
+  routeLine = null
+  if (!map || !props.routePolyline) return
+
+  const path = maps.geometry.encoding.decodePath(props.routePolyline)
+  routeLine = new maps.Polyline({
+    map,
+    path,
+    strokeColor: '#0b5f5c',
+    strokeOpacity: 1,
+    strokeWeight: 6,
+  })
+  const bounds = new maps.LatLngBounds()
+  path.forEach((point: any) => bounds.extend(point))
+  map.fitBounds(bounds, 44)
+}
+
+function locateUser(maps: any) {
+  if (!navigator.geolocation) return
+  navigator.geolocation.getCurrentPosition(({ coords }) => {
+    const position = { lat: coords.latitude, lng: coords.longitude }
+    currentMarker?.setMap(null)
+    currentMarker = new maps.Marker({ map, position, title: '目前位置' })
+    if (!props.routePolyline) {
+      map.setCenter(position)
+      map.setZoom(16)
+    }
+  })
+}
+
+onMounted(async () => {
+  try {
+    const maps = await loadGoogleMaps()
+    await maps.importLibrary('geometry')
+    map = new maps.Map(mapElement.value, {
+      center: { lat: 25.0478, lng: 121.517 },
+      zoom: 15,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+      clickableIcons: false,
+    })
+    drawRoute(maps)
+    locateUser(maps)
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : 'Google Maps 載入失敗'
+  }
+})
+
+watch(() => props.routePolyline, async () => {
+  if (map && window.google?.maps) drawRoute(window.google.maps)
+})
+
+onBeforeUnmount(() => {
+  routeLine?.setMap(null)
+  currentMarker?.setMap(null)
+})
 </script>
 
 <template>
   <div class="map" :style="{ height }">
-    <div class="map__streets" aria-hidden="true" />
-
-    <div v-if="showPark" class="map__park" aria-hidden="true">
-      <span>Central Park</span>
+    <div ref="mapElement" class="map__google" />
+    <div v-if="loadError" class="map__error">
+      <strong>Google Maps 無法顯示</strong>
+      <span>{{ loadError }}</span>
     </div>
-
-    <svg class="map__river" viewBox="0 0 390 80" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0 52C90 34 150 66 220 46S330 20 390 34" stroke="#bcd7e6" stroke-width="18" fill="none" />
-    </svg>
-
-    <svg
-      v-if="showFlood"
-      class="map__flood"
-      viewBox="0 0 390 140"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M0 40C90 18 150 62 230 36S330 8 390 24V104C330 88 250 116 170 100S60 108 0 118Z"
-        fill="#ef9f5c"
-        opacity="0.5"
-      />
-    </svg>
-
-    <svg
-      v-if="showRoute"
-      class="map__route"
-      viewBox="0 0 100 100"
-      preserveAspectRatio="xMidYMid meet"
-      aria-hidden="true"
-    >
-      <path
-        d="M18 86L18 60L46 60L46 30L76 30L76 14"
-        stroke="var(--teal)"
-        stroke-width="6"
-        vector-effect="non-scaling-stroke"
-        fill="none"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-
-    <span
-      v-for="(m, i) in markers"
-      :key="i"
-      class="map__marker"
-      :class="`map__marker--${m.tone ?? 'teal'}`"
-      :style="{ left: `${m.x}%`, top: `${m.y}%` }"
-    >
-      {{ m.label ?? '' }}
-    </span>
 
     <div class="map__overlay">
       <slot />
@@ -86,90 +126,25 @@ withDefaults(
   background: #edefe8;
 }
 
-/* 街廓：大馬路（白色）+ 小巷（淺灰） */
-.map__streets {
+.map__google {
   position: absolute;
   inset: 0;
-  background-image:
-    repeating-linear-gradient(
-      to right,
-      transparent 0 62px,
-      #ffffff 62px 70px,
-      transparent 70px 132px
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0 58px,
-      #ffffff 58px 66px,
-      transparent 66px 124px
-    ),
-    repeating-linear-gradient(to right, transparent 0 31px, #e5e7df 31px 33px),
-    repeating-linear-gradient(to bottom, transparent 0 29px, #e5e7df 29px 31px);
 }
 
-.map__park {
-  position: absolute;
-  left: 14%;
-  top: 26%;
-  width: 30%;
-  height: 15%;
-  border-radius: 10px;
-  background: #cfe6c4;
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  color: #56704b;
-}
-
-.map__river {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 4%;
-  height: 22%;
-}
-
-.map__flood {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 34%;
-  height: 46%;
-}
-
-.map__route {
+.map__error {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.map__marker {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  min-width: 26px;
-  height: 26px;
-  padding: 0 6px;
-  border-radius: 999px;
   display: grid;
-  place-items: center;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  place-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+  color: var(--ink-soft);
+  background: #edefe8;
 }
 
-.map__marker--teal {
-  background: var(--teal);
-}
-
-.map__marker--red {
-  background: var(--red);
-}
-
-.map__marker--green {
-  background: var(--green-strong);
+.map__error strong {
+  color: var(--ink);
 }
 
 .map__overlay {

@@ -21,6 +21,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // 只有伺服器端（server/api/**）能讀到，對應 .env 的 GEMINI_API_KEY
     geminiApiKey: '',
+    googleRoutesApiKey: '',
+    // 瀏覽器無法取得定位時使用的預設起點（地址或地名）。
+    googleRoutesOrigin: '',
     public: {
       // TODO: 之後改由 .env 提供（NUXT_PUBLIC_API_BASE）
       apiBase: '/api',
