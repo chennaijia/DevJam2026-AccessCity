@@ -39,6 +39,9 @@ export default defineNuxtConfig({
         authDomain: '',
         projectId: '',
         appId: '',
+        // Web Push（Cloud Messaging）需要這兩個
+        messagingSenderId: '',
+        vapidKey: '',
       },
     },
   },

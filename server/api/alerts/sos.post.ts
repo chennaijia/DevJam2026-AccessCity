@@ -1,5 +1,6 @@
 import type { AlertDoc } from '../../utils/repo'
 import { alerts } from '../../utils/repo'
+import { notifyCaregivers } from '../../utils/push'
 import { nowHHMM, requireAppUser, requireFamilyId } from '../../utils/session'
 
 export default defineEventHandler(async (event) => {
@@ -26,6 +27,13 @@ export default defineEventHandler(async (event) => {
   }
 
   await alerts.set(alert)
-  // TODO: 推播給家庭裡所有照顧者（FCM）
+
+  await notifyCaregivers(familyId, {
+    title: '緊急求助',
+    body: `${user.name} 按下了 SOS，請盡快聯絡`,
+    url: `/caregiver/alerts/${alert.id}`,
+    alertId: alert.id,
+  })
+
   return alert
 })

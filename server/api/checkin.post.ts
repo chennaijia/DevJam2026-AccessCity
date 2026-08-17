@@ -1,4 +1,5 @@
 import { alerts, checkins, trips } from '../utils/repo'
+import { notifyCaregivers } from '../utils/push'
 import { nowHHMM, requireAppUser, requireFamilyId } from '../utils/session'
 
 /**
@@ -49,8 +50,9 @@ export default defineEventHandler(async (event) => {
 
   if (answer !== 'ok') {
     const escalated = answer === 'no-response'
+    const alertId = `al_${Date.now()}`
     await alerts.set({
-      id: `al_${Date.now()}`,
+      id: alertId,
       familyId,
       kind: 'safety-check',
       memberId: user.id,
@@ -66,7 +68,15 @@ export default defineEventHandler(async (event) => {
       acknowledged: false,
       createdAt: new Date().toISOString(),
     })
-    // TODO: 推播給照顧者（FCM）
+    // 推播給家庭裡的照顧者
+    await notifyCaregivers(familyId, {
+      title: 'Safety Alert',
+      body: escalated
+        ? `${user.name} 沒有回覆安全檢查`
+        : `${user.name} 在安全檢查中要求協助`,
+      url: `/caregiver/alerts/${alertId}`,
+      alertId,
+    })
   }
 
   return { ok: true, escalated: answer !== 'ok' }

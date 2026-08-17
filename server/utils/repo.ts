@@ -37,6 +37,8 @@ export const DEMO_FAMILY_ID = 'f_chuang'
 export interface UserDoc extends User {
   familyId: string | null
   todayNeeds: string[]
+  /** Web Push 的裝置 token（一個帳號可能有多個裝置） */
+  fcmTokens?: string[]
 }
 export interface FamilyDoc extends Omit<Family, 'members'> {}
 export interface MemberDoc extends Member {

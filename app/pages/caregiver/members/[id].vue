@@ -2,10 +2,17 @@
 const route = useRoute()
 const id = route.params.id as string
 
-// TODO: 串接後端 —— GET /api/members/:id（位置、電量、最後移動時間）
-const { data: member } = await useAsyncData(`member-${id}`, () => api.getMember(id))
-// TODO: 串接後端 —— GET /api/trips/current（這位成員進行中的行程與事件時間軸）
-const { data: trip } = await useAsyncData(`member-trip-${id}`, () => api.getCurrentTrip())
+// 成員資料與這位成員的行程一起取；沒有進行中的行程時後端回 404，不能讓整頁掛掉
+const { data: detail } = await useAsyncData(`member-${id}`, async () => {
+  const [member, trip] = await Promise.all([
+    api.getMember(id),
+    api.getCurrentTrip().catch(() => null),
+  ])
+  return { member, trip }
+})
+
+const member = computed(() => detail.value?.member ?? null)
+const trip = computed(() => detail.value?.trip ?? null)
 
 const stayOptions = [5, 10, 15, 30]
 const stayMinutes = ref(member.value?.stayAlertMinutes ?? 15)
@@ -63,12 +70,13 @@ function call() {
       <div class="row" style="gap: 8px; color: var(--teal)">
         <AppIcon name="history" :size="18" /><span class="title-md">Trip Timeline</span>
       </div>
-      <ul class="timeline">
-        <li v-for="e in trip?.events" :key="e.id">
+      <ul v-if="trip?.events?.length" class="timeline">
+        <li v-for="e in trip.events" :key="e.id">
           <b>{{ e.time }}</b> — {{ e.title }}
           <div class="muted">{{ e.detail }}</div>
         </li>
       </ul>
+      <p v-else class="muted" style="margin-top: 8px">目前沒有進行中的行程</p>
     </UiCard>
 
     <!-- 這位成員未處理的提醒，直接從詳情頁進去處理 -->
