@@ -13,7 +13,7 @@ async function shareStatus() {
     <div class="arrived__hero">
       <span class="sparkle sparkle--a">★</span>
       <span class="sparkle sparkle--b">✦</span>
-      <MimoMascot :size="120" />
+      <MimoMascot :size="150" />
       <p class="arrived__title">Safe Arrival</p>
     </div>
 

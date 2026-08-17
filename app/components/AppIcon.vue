@@ -19,7 +19,9 @@ withDefaults(
       | 'sound'
       | 'mute'
       | 'chart'
+      | 'activity'
       | 'clock'
+      | 'history'
       | 'pin'
       | 'check'
       | 'plus'
@@ -106,9 +108,17 @@ withDefaults(
     <template v-else-if="name === 'chart'">
       <path d="M4 18V9M9.5 18V5M15 18v-6M20.5 18V8" />
     </template>
+    <template v-else-if="name === 'activity'">
+      <path d="M2 12.5h4l2.5-7 4 13 2.5-6h7" />
+    </template>
     <template v-else-if="name === 'clock'">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5.4l3.2 2" />
+    </template>
+    <template v-else-if="name === 'history'">
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+      <path d="M3 4v4.5h4.5" />
+      <path d="M12 7.5V12l3 1.8" />
     </template>
     <template v-else-if="name === 'pin'">
       <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z" />

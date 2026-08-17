@@ -85,6 +85,32 @@ export interface Shelter {
   recommended: boolean
 }
 
+/** 常用地點（首頁一鍵導航） */
+export interface SavedPlace {
+  id: string
+  label: string
+  address: string
+  icon: 'house' | 'pin' | 'walk' | 'shield'
+  primary?: boolean
+}
+
+/** 今日需求：只影響今天這幾趟的暫時性條件（企劃書 §4.2） */
+export interface TodayNeedOption {
+  key: string
+  label: string
+}
+
+/** 最近行程紀錄 */
+export interface TripRecord {
+  id: string
+  destination: string
+  dateLabel: string
+  durationLabel: string
+  distanceLabel: string
+  status: 'arrived' | 'stopped'
+  statusLabel: string
+}
+
 export interface TripEvent {
   id: string
   time: string

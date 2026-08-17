@@ -3,6 +3,9 @@
  * 被照顧者端的安全層：SOS 按鈕 + 緊急確認 + 停留 Check-in 詢問。
  * Detect → Ask → Wait → Escalate（企劃書 §4.7）
  */
+/** demo = true 時才顯示「模擬停留」按鈕（導航頁用，避免干擾一般畫面） */
+withDefaults(defineProps<{ demo?: boolean }>(), { demo: false })
+
 const sosOpen = ref(false)
 const checkinOpen = ref(false)
 const toast = ref('')
@@ -38,7 +41,9 @@ function simulateStop() {
 
 <template>
   <div class="overlay">
-    <button class="demo-btn" type="button" @click="simulateStop">模擬停留 15 分鐘</button>
+    <button v-if="demo" class="demo-btn" type="button" @click="simulateStop">
+      模擬停留 15 分鐘
+    </button>
     <button class="sos" type="button" aria-label="緊急求助 SOS" @click="sosOpen = true">SOS</button>
 
     <ModalDialog
@@ -68,7 +73,7 @@ function simulateStop() {
 <style scoped>
 .overlay {
   position: fixed;
-  bottom: 190px;
+  bottom: 112px;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;

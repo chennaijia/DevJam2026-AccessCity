@@ -51,9 +51,9 @@ shared/
 
 | 路由                        | 畫面                                             |
 | --------------------------- | ------------------------------------------------ |
+| `/onboarding/welcome`       | **入口頁**：選擇身分（Navigator / Caregiver / Others） |
 | `/login` `/signup`          | 登入 / 註冊                                      |
-| `/onboarding/welcome`       | 歡迎頁角色選擇（Navigator / Caregiver / Others） |
-| `/onboarding/role`          | 角色選擇（Person receiving care / Caregiver）    |
+| `/onboarding/role`          | 變更角色（Profile → Change Role 進入）           |
 | `/onboarding/needs`         | 無障礙需求勾選                                   |
 | `/onboarding/connect`       | 被照顧者：連結照顧者（輸入 Family Code）         |
 | `/onboarding/join`          | 被照顧者：加入家庭                               |
@@ -64,7 +64,7 @@ shared/
 | `/map/navigate`             | 語音導航中（含 SOS、停留 Check-in）              |
 | `/map/arrived`              | Safe Arrival                                     |
 | `/shelters`                 | 避難所可達性比較                                 |
-| `/home`                     | 首頁（依角色顯示照顧者儀表板或被照顧者首頁）     |
+| `/home`                     | **主頁**（登入後落地）：被照顧者看現在位置／常用地點／今日狀況／已儲存需求／最近紀錄；照顧者看即時位置與統計 |
 | `/mimo`                     | Mimo 對話（Requirement Agent）                   |
 | `/report`                   | 路況回報                                         |
 | `/profile`                  | 個人檔案                                         |
@@ -74,10 +74,16 @@ shared/
 | `/caregiver/alerts/safety`  | Safety Alert（自動安全檢查未回覆）               |
 | `/caregiver/alerts/emergency` | Emergency Alert（手動 SOS）                    |
 
-Demo 動線：`/login` →（Sign Up）→ 角色 → 需求 → 連結照顧者 → `/map` → `/map/plan` → `/map/routes` → `/map/navigate` → `/map/arrived`；
-照顧者端：`/caregiver` → 成員詳情 → `/caregiver/alerts/safety`。
+Demo 動線：`/`（自動導到 `/onboarding/welcome` 選身分）→ `/login` → `/home`（兩種角色都落在主頁）。
+- 被照顧者：`/home`（現在位置／常用地點／今日狀況）→ `/map/plan?to=台大醫院` → `/map/routes` → `/map/navigate` → `/map/arrived`
+- 照顧者：`/home`（即時位置與統計）→ Profile 分頁 `/caregiver` → 成員詳情 → `/caregiver/alerts/safety`
+- 走註冊：`/login` → Sign Up → 需求勾選 → 連結照顧者 / 家庭代碼 → 主頁
 
-導航頁與被照顧者首頁左下角有 **「模擬停留 15 分鐘」** 按鈕，用來在 demo 時觸發 Check-in 對話框。
+身分在第一頁就選好，存在 session 的 `pendingRole`，登入或註冊成功後才寫回帳號（`PATCH /api/me`）。
+
+導航頁左下角有 **「模擬停留 15 分鐘」** 按鈕（`<SafetyOverlay demo />`），用來在 demo 時觸發 Check-in 對話框；其他畫面只會顯示 SOS 浮動按鈕。
+
+被照顧者的需求分兩層：**固定需求**（輪椅／視障／行動協助，存在帳號上）與 **今日需求**（今天腳痠、想避開施工…，主頁一鍵切換、只在當天有效）。兩者都會一起送進 `GET /api/routes`。
 
 ---
 
@@ -105,7 +111,8 @@ async getRoutes(destination, needs) {
 - **語音**：`app/pages/map/index.vue`、`app/pages/mimo.vue`（STT）、`app/pages/map/navigate.vue`（TTS 播報）。
 - **LLM**：`server/api/agent/requirement.post.ts`（目前是關鍵字規則，之後換成 Claude Messages API 的結構化輸出）。
 - **推播 / 即時更新**：`server/api/alerts/*`、`app/pages/caregiver/*`（目前是輪詢式 `useAsyncData`，正式版建議 SSE 或推播）。
-- **Mimo 角色圖**：`app/components/MimoMascot.vue` 是暫時的 SVG，之後可換成正式插畫（放 `public/`）。
+- **Mimo 角色圖**：正式插畫在 `public/mimo.png`（384px，大尺寸用）與 `public/mimo-icon.png`（96px，小頭像／favicon 用），
+  由 `app/components/MimoMascot.vue` 依 size 自動挑檔；要換角色圖直接換這兩個檔案。
 
 ---
 
@@ -127,6 +134,10 @@ async getRoutes(destination, needs) {
 | POST   | `/api/agent/requirement`          | Requirement Agent：自然語言 → 需求 chips |
 | GET    | `/api/routes`                     | 候選路線（含推薦理由與評分）     |
 | GET    | `/api/shelters`                   | 避難所可達性                     |
+| GET    | `/api/places`                     | 常用地點（首頁一鍵導航）         |
+| GET    | `/api/needs/today`                | 今日需求選項                     |
+| PATCH  | `/api/needs/today`                | 更新今日需求（當天有效）         |
+| GET    | `/api/trips/recent`               | 最近行程紀錄                     |
 | GET    | `/api/trips/current`              | 進行中的行程                     |
 | GET    | `/api/trips/overview`             | 本週統計                         |
 | POST   | `/api/trips`                      | 開始行程                         |

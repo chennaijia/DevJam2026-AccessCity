@@ -7,6 +7,9 @@ import type {
   CareAlert,
   Family,
   Member,
+  SavedPlace,
+  TodayNeedOption,
+  TripRecord,
   NotificationSettings,
   RequirementChip,
   RouteOption,
@@ -147,6 +150,52 @@ export const mockShelters: Shelter[] = [
     headline: 'Safe Reachable Route',
     tags: ['Wheelchair Accessible', 'Suitable for Flood Evacuation'],
     recommended: true,
+  },
+]
+
+export const mockSavedPlaces: SavedPlace[] = [
+  { id: 'p_home', label: '回家', address: '14 Maple Ave', icon: 'house', primary: true },
+  { id: 'p_hospital', label: '台大醫院', address: '中山南路 7 號', icon: 'shield' },
+  { id: 'p_park', label: '中央公園', address: 'Central Park east gate', icon: 'walk' },
+  { id: 'p_mrt', label: '捷運站', address: 'Main St. Station', icon: 'pin' },
+]
+
+/** 今日需求選項：只影響今天的路線，不會覆蓋固定需求 */
+export const mockTodayNeedOptions: TodayNeedOption[] = [
+  { key: 'tired', label: '今天腳比較痠' },
+  { key: 'short', label: '想少走一點' },
+  { key: 'avoid-construction', label: '想避開施工' },
+  { key: 'rest', label: '需要休息點' },
+  { key: 'shade', label: '想走遮蔭' },
+]
+
+export const mockRecentTrips: TripRecord[] = [
+  {
+    id: 'tr_1',
+    destination: '台大醫院',
+    dateLabel: '今天 09:20',
+    durationLabel: '25 分鐘',
+    distanceLabel: '1.2 km',
+    status: 'arrived',
+    statusLabel: '安全抵達',
+  },
+  {
+    id: 'tr_2',
+    destination: 'Community Center',
+    dateLabel: '昨天 16:10',
+    durationLabel: '18 分鐘',
+    distanceLabel: '0.9 km',
+    status: 'arrived',
+    statusLabel: '安全抵達',
+  },
+  {
+    id: 'tr_3',
+    destination: '中央公園',
+    dateLabel: '週一 15:02',
+    durationLabel: '12 分鐘',
+    distanceLabel: '0.6 km',
+    status: 'stopped',
+    statusLabel: '中途結束',
   },
 ]
 

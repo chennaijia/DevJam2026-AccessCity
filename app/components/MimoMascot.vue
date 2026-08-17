@@ -1,19 +1,35 @@
 <script setup lang="ts">
-/** Mimo：AI 陪伴角色（企劃書中的 Agent 人格化形象） */
-withDefaults(defineProps<{ size?: number }>(), { size: 56 })
+/**
+ * Mimo：AI 陪伴角色（企劃書中的 Agent 人格化形象）
+ * 圖檔在 public/：小尺寸用 mimo-icon.png（96px），大尺寸用 mimo.png（384px）。
+ * 之後要換插畫，直接換這兩個檔案即可。
+ */
+const props = withDefaults(defineProps<{ size?: number; alt?: string }>(), {
+  size: 56,
+  alt: 'Mimo',
+})
+
+const src = computed(() => (props.size > 96 ? '/mimo.png' : '/mimo-icon.png'))
 </script>
 
 <template>
-  <svg :width="size" :height="size" viewBox="0 0 64 64" role="img" aria-label="Mimo">
-    <circle cx="32" cy="38" r="20" fill="#8fe3a4" stroke="#10120f" stroke-width="2" />
-    <circle cx="32" cy="38" r="14" fill="#d9f7de" />
-    <path d="M24 16c-6-4-14-3-16 2 5 5 12 5 16-2Z" fill="#6ec97f" stroke="#10120f" stroke-width="2" />
-    <path d="M40 16c6-4 14-3 16 2-5 5-12 5-16-2Z" fill="#6ec97f" stroke="#10120f" stroke-width="2" />
-    <path d="M32 20v6" stroke="#10120f" stroke-width="2" stroke-linecap="round" />
-    <circle cx="26" cy="36" r="2.6" fill="#10120f" />
-    <circle cx="38" cy="36" r="2.6" fill="#10120f" />
-    <circle cx="21" cy="42" r="2.6" fill="#f4b6b0" opacity="0.9" />
-    <circle cx="43" cy="42" r="2.6" fill="#f4b6b0" opacity="0.9" />
-    <path d="M29 43c1.8 1.8 4.2 1.8 6 0" stroke="#10120f" stroke-width="2" stroke-linecap="round" fill="none" />
-  </svg>
+  <img
+    :src="src"
+    :alt="alt"
+    :width="size"
+    :height="size"
+    class="mimo-img"
+    :style="{ width: `${size}px`, height: `${size}px` }"
+    decoding="async"
+  />
 </template>
+
+<style scoped>
+.mimo-img {
+  display: block;
+  object-fit: contain;
+  flex: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+</style>

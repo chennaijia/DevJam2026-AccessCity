@@ -18,8 +18,11 @@ import type {
   RequirementChip,
   Role,
   RouteOption,
+  SavedPlace,
   Shelter,
+  TodayNeedOption,
   Trip,
+  TripRecord,
   User,
   WeeklyOverview,
 } from '#shared/types/accessity'
@@ -29,9 +32,12 @@ import {
   mockFamily,
   mockMembers,
   mockNotificationSettings,
+  mockRecentTrips,
   mockRequirementChips,
   mockRoutes,
+  mockSavedPlaces,
   mockShelters,
+  mockTodayNeedOptions,
   mockTrip,
   mockUser,
   mockWeeklyOverview,
@@ -142,10 +148,18 @@ export const api = {
     return mock(chips, 600)
   },
 
-  async getRoutes(destination: string, needs: AccessNeed[] = []): Promise<RouteOption[]> {
-    // TODO: 串接後端 —— GET /api/routes?destination=&needs=
-    //       後端負責呼叫 Google Routes API + 施工／無障礙資料，回傳排序後的路線
-    if (!USE_MOCK) return request<RouteOption[]>('/routes', { query: { destination, needs: needs.join(',') } })
+  async getRoutes(
+    destination: string,
+    needs: AccessNeed[] = [],
+    todayNeeds: string[] = [],
+  ): Promise<RouteOption[]> {
+    // TODO: 串接後端 —— GET /api/routes?destination=&needs=&today=
+    //       後端負責呼叫 Google Routes API + 施工／無障礙資料，回傳排序後的路線。
+    //       needs = 固定需求（輪椅/視障…），today = 今日需求（腳痠、想避開施工…）
+    if (!USE_MOCK)
+      return request<RouteOption[]>('/routes', {
+        query: { destination, needs: needs.join(','), today: todayNeeds.join(',') },
+      })
     return mock(mockRoutes, 400)
   },
 
@@ -153,6 +167,33 @@ export const api = {
     // TODO: 串接後端 —— GET /api/shelters（避難所 / 可達性比較）
     if (!USE_MOCK) return request<Shelter[]>('/shelters')
     return mock(mockShelters)
+  },
+
+  /* ------------------------------------------- 首頁：常用地點 / 今日需求 */
+
+  async getSavedPlaces(): Promise<SavedPlace[]> {
+    // TODO: 串接後端 —— GET /api/places（使用者儲存的常用地點）
+    if (!USE_MOCK) return request<SavedPlace[]>('/places')
+    return mock(mockSavedPlaces)
+  },
+
+  async getTodayNeedOptions(): Promise<TodayNeedOption[]> {
+    // TODO: 串接後端 —— GET /api/needs/today（可依使用者歷史推薦選項）
+    if (!USE_MOCK) return request<TodayNeedOption[]>('/needs/today')
+    return mock(mockTodayNeedOptions)
+  },
+
+  async saveTodayNeeds(keys: string[]): Promise<ApiOk> {
+    // TODO: 串接後端 —— PATCH /api/needs/today { keys }
+    //       今日需求只在當天有效，隔天自動清空（後端要記 expiresAt）
+    if (!USE_MOCK) return request('/needs/today', { method: 'PATCH', body: { keys } })
+    return mock({ ok: true } as ApiOk)
+  },
+
+  async getRecentTrips(): Promise<TripRecord[]> {
+    // TODO: 串接後端 —— GET /api/trips/recent
+    if (!USE_MOCK) return request<TripRecord[]>('/trips/recent')
+    return mock(mockRecentTrips)
   },
 
   /* ------------------------------------------------------------ 行程 Trip */

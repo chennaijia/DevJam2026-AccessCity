@@ -1,17 +1,41 @@
 <script setup lang="ts">
-/** AI Requirement Confirmation（企劃書 §6）：AI 解析出的需求變成 chips 讓使用者確認 */
-const { destination, chips, routes } = usePlanning()
+/**
+ * AI Requirement Confirmation（企劃書 §6）
+ * 使用者說一句話 → Requirement Agent 拆成 chips → 確認後才開始規劃路線。
+ */
+const { destination, chips, routes, todayNeeds } = usePlanning()
 const { user } = useSession()
+const route = useRoute()
 
-const text = ref(destination.value || '我要去台大醫院，今天走路不太方便，也想避開施工')
+// 目的地可從網址帶入（首頁常用地點 / 最近紀錄 / 重新整理都用得到）
+const initialDestination = (route.query.to as string) || destination.value
+
+// TODO: 串接後端 —— GET /api/needs/today（今日需求會併進導航條件）
+const { data: todayOptions } = await useAsyncData('plan-today', () => api.getTodayNeedOptions())
+
+const text = ref(initialDestination)
 const loading = ref(false)
+const parsed = ref(false)
+
+const examples = [
+  '我要去台大醫院，今天走路不太方便',
+  '帶我去最近的捷運站，想避開施工',
+  '想去公園走走，找有休息椅的路',
+]
+
+/** 今日需求也要出現在確認清單裡，使用者才知道系統考慮了什麼 */
+const todayChips = computed(() =>
+  (todayOptions.value ?? []).filter((o) => todayNeeds.value.includes(o.key)),
+)
 
 async function parse() {
+  if (!text.value.trim()) return
   loading.value = true
   try {
     // TODO: 串接後端 —— POST /api/agent/requirement { text }（Requirement Agent / LLM）
     chips.value = await api.parseRequirement(text.value)
     destination.value = chips.value.find((c) => c.key === 'destination')?.label ?? text.value
+    parsed.value = true
   } finally {
     loading.value = false
   }
@@ -22,17 +46,24 @@ function removeChip(key: string) {
 }
 
 async function startNavigation() {
-  // TODO: 串接後端 —— GET /api/routes?destination=&needs=（Navigation Agent 會併入施工資料）
-  routes.value = await api.getRoutes(destination.value, user.value?.needs ?? [])
+  // TODO: 串接後端 —— GET /api/routes?destination=&needs=&today=
+  routes.value = await api.getRoutes(destination.value, user.value?.needs ?? [], todayNeeds.value)
   await navigateTo('/map/routes')
 }
 
-await parse()
+function startVoice() {
+  // TODO: 串接語音輸入 —— Web Speech API（SpeechRecognition），辨識結果填進 text 後自動 parse
+  text.value = text.value || examples[0]!
+  return parse()
+}
+
+// 從首頁／常用地點帶著目的地進來的話，直接幫他解析好
+if (initialDestination) await parse()
 </script>
 
 <template>
   <section class="screen screen--nav">
-    <ScreenHeader title="Accessity" back="/map" />
+    <ScreenHeader title="Accessity" back="/home" />
 
     <div>
       <h2 class="title-lg">你今天想去哪裡？</h2>
@@ -40,22 +71,50 @@ await parse()
     </div>
 
     <UiCard padding="14px 16px">
-      <textarea v-model="text" class="need-input" rows="3" />
-      <UiButton variant="outline" :disabled="loading" @click="parse">
-        {{ loading ? 'Mimo 理解中…' : '重新理解需求' }}
-      </UiButton>
+      <textarea
+        v-model="text"
+        class="need-input"
+        rows="3"
+        placeholder="例如：我要去台大醫院，今天走路不太方便，也想避開施工"
+        aria-label="輸入目的地與需求"
+      />
+      <div class="row">
+        <UiButton :disabled="!text.trim() || loading" @click="parse">
+          {{ loading ? 'Mimo 理解中…' : parsed ? '重新理解' : '讓 Mimo 理解' }}
+        </UiButton>
+        <UiButton variant="outline" :block="false" aria-label="語音輸入" @click="startVoice">
+          <AppIcon name="mic" :size="20" />
+        </UiButton>
+      </div>
     </UiCard>
 
-    <div class="label">AI 解析出的需求</div>
+    <!-- 還沒輸入時給範例，降低「不知道要說什麼」的門檻 -->
+    <template v-if="!chips.length">
+      <div class="label">可以這樣說</div>
+      <div class="stack-sm">
+        <UiChip v-for="e in examples" :key="e" as="button" @click="((text = e), parse())">
+          {{ e }}
+        </UiChip>
+      </div>
+    </template>
 
-    <div class="row" style="flex-wrap: wrap">
-      <UiChip v-for="c in chips" :key="c.key" tone="green" as="button" @click="removeChip(c.key)">
-        {{ c.label }} ✕
-      </UiChip>
-      <span v-if="!chips.length" class="muted">還沒有需求，先描述一下你的狀況</span>
-    </div>
+    <template v-else>
+      <div class="label">AI 解析出的需求</div>
+      <div class="row" style="flex-wrap: wrap">
+        <UiChip v-for="c in chips" :key="c.key" tone="green" as="button" @click="removeChip(c.key)">
+          {{ c.label }} ✕
+        </UiChip>
+      </div>
 
-    <MimoBubble text="確認沒問題的話，我就幫你找最適合的路線。" />
+      <template v-if="todayChips.length">
+        <div class="label">今天的身體狀況</div>
+        <div class="row" style="flex-wrap: wrap">
+          <UiChip v-for="c in todayChips" :key="c.key">{{ c.label }}</UiChip>
+        </div>
+      </template>
+
+      <MimoBubble text="確認沒問題的話，我就幫你找最適合的路線。" />
+    </template>
 
     <div class="spacer" />
 
