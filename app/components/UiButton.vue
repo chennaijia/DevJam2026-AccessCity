@@ -12,11 +12,13 @@ withDefaults(
   }>(),
   { variant: 'primary', block: true },
 )
+
+const NuxtLink = resolveComponent('NuxtLink')
 </script>
 
 <template>
   <component
-    :is="to ? resolveComponent('NuxtLink') : 'button'"
+    :is="to ? NuxtLink : 'button'"
     :to="to"
     :disabled="disabled"
     class="btn"

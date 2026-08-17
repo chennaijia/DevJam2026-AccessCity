@@ -1,9 +1,14 @@
-import { db } from '../../utils/store'
+import { members } from '../../utils/repo'
+import { requireFamilyId } from '../../utils/session'
 
-export default defineEventHandler((event) => {
-  const id = getRouterParam(event, 'id')
-  const member = db.members.find((m) => m.id === id)
+export default defineEventHandler(async (event) => {
+  const familyId = await requireFamilyId(event)
+  const id = getRouterParam(event, 'id')!
 
-  if (!member) throw createError({ statusCode: 404, statusMessage: 'Member not found' })
+  const member = await members.get(id)
+  if (!member || member.familyId !== familyId) {
+    throw createError({ statusCode: 404, statusMessage: 'Member not found' })
+  }
+
   return member
 })

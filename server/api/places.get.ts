@@ -1,6 +1,8 @@
-import { mockSavedPlaces } from '#shared/mock/data'
+import { ensureUserSeed, places } from '../utils/repo'
+import { requireAppUser } from '../utils/session'
 
-export default defineEventHandler(() => {
-  // TODO: 改讀使用者自己儲存的常用地點（含座標），並依使用頻率排序
-  return mockSavedPlaces
+export default defineEventHandler(async (event) => {
+  const user = await requireAppUser(event)
+  await ensureUserSeed(user.id)
+  return await places.list({ userId: user.id })
 })

@@ -1,6 +1,6 @@
-import { currentUser } from '../utils/store'
+import { requireAppUser } from '../utils/session'
 
-export default defineEventHandler(() => {
-  // TODO: 從 token / session 取得使用者，未登入回 401
-  return currentUser()
+export default defineEventHandler(async (event) => {
+  // 未登入會回 401，前端 middleware 會導回 /login
+  return await requireAppUser(event)
 })

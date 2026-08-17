@@ -1,11 +1,13 @@
-import { db } from '../../../../utils/store'
+import { members } from '../../../../utils/repo'
+import { requireFamilyId } from '../../../../utils/session'
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
+  const familyId = await requireFamilyId(event)
   const id = getRouterParam(event, 'id')
 
-  // TODO: 依 invite id 查出邀請、確認未過期、建立家庭關聯
-  const pending = db.members.find((m) => m.invitePending)
-  if (pending) pending.invitePending = false
+  // TODO: 換成真正的邀請實體（含過期時間），目前把家庭裡待確認的成員標成已加入
+  const pending = (await members.list({ familyId })).find((m) => m.invitePending)
+  if (pending) await members.update(pending.id, { invitePending: false })
 
   return { ok: true, inviteId: id }
 })

@@ -8,11 +8,13 @@ withDefaults(
   }>(),
   { variant: 'soft', padding: '16px' },
 )
+
+const NuxtLink = resolveComponent('NuxtLink')
 </script>
 
 <template>
   <component
-    :is="to ? resolveComponent('NuxtLink') : 'div'"
+    :is="to ? NuxtLink : 'div'"
     :to="to"
     class="card"
     :class="[`card--${variant}`, { 'card--link': to }]"

@@ -1,6 +1,10 @@
-import { db } from '../../utils/store'
+import { trips } from '../../utils/repo'
+import { requireFamilyId } from '../../utils/session'
 
-export default defineEventHandler(() => {
-  // TODO: 依照顧者選擇的成員回傳其進行中的行程；沒有行程時回 status: 'idle'
-  return db.trip
+export default defineEventHandler(async (event) => {
+  const familyId = await requireFamilyId(event)
+  const [trip] = await trips.list({ familyId })
+
+  if (!trip) throw createError({ statusCode: 404, statusMessage: '目前沒有進行中的行程' })
+  return trip
 })

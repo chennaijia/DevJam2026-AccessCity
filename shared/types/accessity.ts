@@ -12,6 +12,10 @@ export interface User {
   id: string
   name: string
   email: string
+  /** Google 頭像網址（用 Google 登入時帶進來） */
+  avatar?: string
+  /** 登入方式：google 或 demo 帳號 */
+  provider?: 'google' | 'demo'
   role: Role
   needs: AccessNeed[]
   familyCode: string | null
@@ -82,6 +86,9 @@ export interface RouteOption {
   safetyScore?: number
   distanceMeters?: number
   encodedPolyline?: string
+  /** 這條路線會經過的路段，用來和施工資料做交叉比對 */
+  segments?: string[]
+  /** 比對後撞到的施工路段（前端會顯示在路線卡與導航畫面） */
   constructionConflicts?: ConstructionZone[]
   steps: RouteStep[]
 }

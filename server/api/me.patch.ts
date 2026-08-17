@@ -1,16 +1,18 @@
 import type { AccessNeed, Role } from '#shared/types/accessity'
-import { currentUser } from '../utils/store'
+import { users } from '../utils/repo'
+import { invalidateUserCache, requireAppUser } from '../utils/session'
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody<{ role?: Role; needs?: AccessNeed[]; name?: string; email?: string }>(
-    event,
-  )
-  const user = currentUser()
+  const user = await requireAppUser(event)
+  const body = await readBody<{ role?: Role; needs?: AccessNeed[]; name?: string }>(event)
 
-  if (body.role) user.role = body.role
-  if (body.needs) user.needs = body.needs
-  if (body.name) user.name = body.name
-  if (body.email) user.email = body.email
+  const patch: Record<string, unknown> = {}
+  if (body.role) patch.role = body.role
+  if (body.needs) patch.needs = body.needs
+  if (body.name) patch.name = body.name
+  // Email 由 Google 帳號決定，不開放改
 
-  return user
+  if (!Object.keys(patch).length) return user
+  invalidateUserCache(user.id)
+  return await users.update(user.id, patch)
 })

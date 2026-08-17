@@ -25,6 +25,61 @@ npm run typecheck  # 型別檢查
 
 ---
 
+## Firebase（Google 登入 + Firestore）
+
+登入用 **Firebase Authentication 的 Google 登入**，資料存 **Firestore**。
+前端只負責拿 idToken，驗證與 session 都在後端，瀏覽器不保存任何 token。
+
+### 設定步驟
+
+1. Firebase Console 建立專案 → **Authentication → Sign-in method → 啟用 Google**
+2. **Firestore Database → 建立資料庫**（正式模式即可，前端不直連，都走後端）
+3. 專案設定 → 一般 → 新增網頁應用程式，把設定值填進 `.env`：
+
+```bash
+NUXT_PUBLIC_FIREBASE_API_KEY=...
+NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<project>.firebaseapp.com
+NUXT_PUBLIC_FIREBASE_PROJECT_ID=...
+NUXT_PUBLIC_FIREBASE_APP_ID=...
+```
+
+4. 專案設定 → **服務帳戶 → 產生新的私密金鑰**，下載的 JSON 用 base64 後填進：
+
+```bash
+NUXT_FIREBASE_SERVICE_ACCOUNT=$(base64 -i service-account.json)
+NUXT_SESSION_PASSWORD=至少 32 字元的隨機字串
+```
+
+5. 重新啟動 `npm run dev`（`.env` 改了一定要重啟）
+
+### 登入流程
+
+```
+登入頁 →（Firebase SDK）signInWithPopup → idToken
+      → POST /api/auth/firebase →（Admin SDK）verifyIdToken
+      → 建立/更新使用者 → 加密 session cookie → /home
+```
+
+- 第一次登入自動建立帳號，並加入示範家庭，登入後就看得到內容。
+- 歡迎頁選的身分存在 `accessity_pending_role` cookie，`/api/auth/firebase` 會套用到新帳號。
+- `server/middleware/auth.ts` 讓 `/api/**` 一律需要 session（只放行 `/api/auth/*`），未登入回 401，
+  前端 `session.global.ts` 會導回 `/login`。
+- **沒設定金鑰也能跑**：資料層會自動退回記憶體模式，登入頁的「先用 Demo 帳號看看」走 `POST /api/auth/demo`。
+  正式環境請關掉 demo 登入。
+
+### 資料層
+
+`server/utils/collections.ts` 定義一組集合介面，有 Firestore 與記憶體兩種實作；
+`server/utils/repo.ts` 是各資料表的入口，handler 只認 repo，所以要換資料庫只要改這兩個檔案。
+
+| Collection | 內容 | 切分方式 |
+| --- | --- | --- |
+| `users` | 帳號、角色、無障礙需求、今日需求 | 自己 |
+| `families` / `members` | 家庭、成員狀態 | `familyId` |
+| `alerts` / `trips` | Care Alert、進行中的行程 | `familyId` |
+| `notifications` / `places` / `tripRecords` / `settings` | 通知、常用地點、行程紀錄、通知設定 | `userId` |
+| `reports` / `checkins` | 路況回報、Check-in 紀錄 | `userId` |
+
 ## 專案結構
 
 ```
@@ -52,7 +107,7 @@ shared/
 | 路由                        | 畫面                                             |
 | --------------------------- | ------------------------------------------------ |
 | `/onboarding/welcome`       | **入口頁**：選擇身分（Navigator / Caregiver / Others） |
-| `/login` `/signup`          | 登入 / 註冊                                      |
+| `/login`                    | 登入（Google 帳號；另有 Demo 帳號備援）           |
 | `/onboarding/role`          | 變更角色（Profile → Change Role 進入）           |
 | `/onboarding/needs`         | 無障礙需求勾選                                   |
 | `/onboarding/connect`       | 被照顧者：連結照顧者（輸入 Family Code）         |
@@ -145,8 +200,9 @@ async getRoutes(destination, needs) {
 
 | Method | 路徑                              | 說明                             |
 | ------ | --------------------------------- | -------------------------------- |
-| POST   | `/api/auth/login`                 | 登入（demo 不驗密碼）            |
-| POST   | `/api/auth/signup`                | 註冊                             |
+| GET    | `/api/auth/google`                | Google OAuth 登入 / 回呼         |
+| POST   | `/api/auth/demo`                  | Demo 帳號登入（沒有 Google 金鑰時備援）|
+| POST   | `/api/auth/logout`                | 登出（清除 session cookie）      |
 | GET    | `/api/me`                         | 目前使用者                       |
 | PATCH  | `/api/me`                         | 更新角色 / 無障礙需求 / 基本資料 |
 | GET    | `/api/family`                     | 家庭與成員                       |

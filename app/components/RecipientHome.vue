@@ -10,11 +10,22 @@ defineProps<{ user: User | null }>()
 const { destination, todayNeeds, toggleTodayNeed, planTo } = usePlanning()
 const { listen, listening, canListen } = useSpeech()
 
-// TODO: 串接後端 —— GET /api/places、GET /api/needs/today、GET /api/trips/recent、GET /api/trips/current
-const { data: places } = await useAsyncData('home-places', () => api.getSavedPlaces())
-const { data: todayOptions } = await useAsyncData('home-today', () => api.getTodayNeedOptions())
-const { data: recentTrips } = await useAsyncData('home-recent', () => api.getRecentTrips())
-const { data: trip } = await useAsyncData('home-trip', () => api.getCurrentTrip())
+// 一次平行取完首頁需要的資料（分開 await 會讓 SSR 等上好幾個 round trip）
+const { data: home } = await useAsyncData('recipient-home', async () => {
+  const [places, todayOptions, recentTrips, trip] = await Promise.all([
+    api.getSavedPlaces(),
+    api.getTodayNeedOptions(),
+    api.getRecentTrips(),
+    // 沒有進行中的行程時後端會回 404，這裡不讓它中斷整頁
+    api.getCurrentTrip().catch(() => null),
+  ])
+  return { places, todayOptions, recentTrips, trip }
+})
+
+const places = computed(() => home.value?.places ?? [])
+const todayOptions = computed(() => home.value?.todayOptions ?? [])
+const recentTrips = computed(() => home.value?.recentTrips ?? [])
+const trip = computed(() => home.value?.trip ?? null)
 
 const onTrip = computed(() => trip.value?.status === 'on-trip')
 

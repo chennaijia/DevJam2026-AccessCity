@@ -1,15 +1,17 @@
-import { db, currentUser } from '../../utils/store'
+import { families, members, users } from '../../utils/repo'
+import { requireAppUser } from '../../utils/session'
 
 export default defineEventHandler(async (event) => {
+  const user = await requireAppUser(event)
   const { code } = await readBody<{ code: string }>(event)
 
-  const ok = (code ?? '').trim().toUpperCase() === db.family.code
-  if (ok) {
-    // TODO: 寫入 family_members 關聯表，並通知照顧者「有人加入」
-    const user = currentUser()
-    user.familyCode = db.family.code
-    user.connectedCaregiver = { id: 'u_naijia', name: '陳乃嘉' }
-  }
+  const target = (await families.list()).find(
+    (f) => f.code.toUpperCase() === (code ?? '').trim().toUpperCase(),
+  )
 
-  return { ok, family: { ...db.family, members: db.members } }
+  if (!target) return { ok: false, family: null }
+
+  await users.update(user.id, { familyId: target.id, familyCode: target.code })
+
+  return { ok: true, family: { ...target, members: await members.list({ familyId: target.id }) } }
 })

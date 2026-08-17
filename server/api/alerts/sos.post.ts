@@ -1,26 +1,31 @@
-import type { CareAlert } from '#shared/types/accessity'
-import { db, nowHHMM } from '../../utils/store'
+import type { AlertDoc } from '../../utils/repo'
+import { alerts } from '../../utils/repo'
+import { nowHHMM, requireAppUser, requireFamilyId } from '../../utils/session'
 
 export default defineEventHandler(async (event) => {
+  const user = await requireAppUser(event)
+  const familyId = await requireFamilyId(event)
   const body = await readBody<{ lat?: number; lng?: number }>(event).catch(
     () => ({}) as { lat?: number; lng?: number },
   )
 
-  // TODO: 立即推播給所有已連結的照顧者（FCM / APNs），並寫入事件紀錄
-  const alert: CareAlert = {
+  const alert: AlertDoc = {
     id: `al_${Date.now()}`,
+    familyId,
     kind: 'emergency',
-    memberId: 'm_kai',
-    memberName: 'Kai',
+    memberId: user.id,
+    memberName: user.name,
     title: 'Emergency Alert',
-    message: 'Kai has requested immediate assistance.',
+    message: `${user.name} has requested immediate assistance.`,
     sourceLabel: 'Manual SOS',
     location: body?.lat ? `${body.lat}, ${body.lng}` : 'Main St. near 4th Ave',
     time: `${nowHHMM()} · just now`,
     lastMovement: 'just now',
     acknowledged: false,
+    createdAt: new Date().toISOString(),
   }
 
-  db.alerts.unshift(alert)
+  await alerts.set(alert)
+  // TODO: 推播給家庭裡所有照顧者（FCM）
   return alert
 })
