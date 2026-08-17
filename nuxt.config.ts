@@ -24,6 +24,8 @@ export default defineNuxtConfig({
     // 只有伺服器端（server/api/**）能讀到，對應 .env 的 GEMINI_API_KEY
     geminiApiKey: '',
     googleRoutesApiKey: '',
+    // 「最近的 XX」這種相對地點查詢要用 Places Nearby Search 解析，對應 .env 的 GOOGLE_PLACES_API_KEY
+    googlePlacesApiKey: '',
     // Firebase Admin 服務帳戶（JSON 或 base64），對應 .env 的 NUXT_FIREBASE_SERVICE_ACCOUNT
     firebaseServiceAccount: '',
     // 瀏覽器無法取得定位時使用的預設起點（地址或地名）。

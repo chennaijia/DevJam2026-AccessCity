@@ -163,6 +163,22 @@ export const api = {
     return request<SavedPlace[]>('/places')
   },
 
+  async addSavedPlace(payload: { label: string; address: string; icon?: SavedPlace['icon'] }): Promise<SavedPlace> {
+    if (!USE_MOCK) return request<SavedPlace>('/places', { method: 'POST', body: payload })
+    return mock({ id: `p_${Date.now()}`, icon: 'pin', ...payload })
+  },
+
+  async updateSavedPlace(id: string, patch: Partial<SavedPlace>): Promise<SavedPlace> {
+    if (!USE_MOCK) return request<SavedPlace>(`/places/${id}`, { method: 'PATCH', body: patch })
+    const target = mockSavedPlaces.find((p) => p.id === id)!
+    return mock({ ...target, ...patch })
+  },
+
+  async deleteSavedPlace(id: string): Promise<ApiOk> {
+    if (!USE_MOCK) return request(`/places/${id}`, { method: 'DELETE' })
+    return mock({ ok: true } as ApiOk)
+  },
+
   async getTodayNeedOptions(): Promise<TodayNeedOption[]> {
     return request<TodayNeedOption[]>('/needs/today')
   },

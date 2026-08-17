@@ -75,6 +75,9 @@ async function signOut() {
       </UiButton>
     </UiCard>
 
+    <div class="label">常用地址</div>
+    <LinkRow label="Saved addresses" value="Create, Update, Delete" to="/settings/places" />
+
     <div class="label">Connections</div>
     <LinkRow
       label="Connected caregiver"

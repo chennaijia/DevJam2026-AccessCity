@@ -3,6 +3,7 @@ import { checkRouteAccessibilityCoverage, findNearbyAmenities, findRouteAccessib
 import { checkRouteConstructionConflicts, findBlockingHit } from '../utils/construction'
 import { decodePolyline, destinationPoint } from '../utils/geo'
 import { planRoutes } from '../utils/routePlanner'
+import { extractNearbyPlaceType, findNearestPlace } from '../utils/places'
 
 interface GoogleRoute {
   distanceMeters?: number
@@ -259,9 +260,23 @@ export default defineEventHandler(async (event): Promise<RouteOption[]> => {
   const destLng = Number(query.destLng)
   const hasDestCoordinates =
     query.destLat !== undefined && query.destLng !== undefined && Number.isFinite(destLat) && Number.isFinite(destLng)
-  const destinationTarget: GoogleOrigin = hasDestCoordinates
+  let destinationTarget: GoogleOrigin = hasDestCoordinates
     ? { location: { latLng: { latitude: destLat, longitude: destLng } } }
     : { address: destination }
+
+  // 「最近的 XX」不能直接拿去查地址（Google 找不到一個叫「最近的捷運站」的地方），
+  // 要用 Places Nearby Search 從使用者座標找真正最近的那個地點
+  let resolvedDestinationName: string | null = null
+  if (!hasDestCoordinates && hasCoordinates) {
+    const placeType = extractNearbyPlaceType(destination)
+    if (placeType && config.googlePlacesApiKey) {
+      const nearest = await findNearestPlace(placeType, { lat, lng }, String(config.googlePlacesApiKey))
+      if (nearest) {
+        destinationTarget = { location: { latLng: { latitude: nearest.lat, longitude: nearest.lng } } }
+        resolvedDestinationName = nearest.name
+      }
+    }
+  }
 
   try {
     const routes = await callGoogleRoutes(apiKey, origin, destinationTarget)
@@ -272,6 +287,11 @@ export default defineEventHandler(async (event): Promise<RouteOption[]> => {
     const hasConstructionNeed = /avoid-construction/.test(needs)
     const needsSpecialHandling = hasAccessibilityNeed || hasConstructionNeed
     const options = routes.map((route, index) => toRouteOption(route, index, needsSpecialHandling))
+
+    // 讓使用者知道「最近的捷運站」實際上被定位到哪裡了，不是憑空生出一個地點
+    if (resolvedDestinationName) {
+      for (const option of options) option.tags = [`📍 已定位到「${resolvedDestinationName}」`, ...option.tags]
+    }
 
     if (!needsSpecialHandling) return options
 
