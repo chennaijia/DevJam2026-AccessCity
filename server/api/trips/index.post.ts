@@ -1,14 +1,19 @@
-import { db, nowHHMM } from '../../utils/store'
+import { trips } from '../../utils/repo'
+import { nowHHMM, requireAppUser, requireFamilyId } from '../../utils/session'
 
 export default defineEventHandler(async (event) => {
+  const user = await requireAppUser(event)
+  const familyId = await requireFamilyId(event)
   const { destination, routeId } = await readBody<{ destination: string; routeId: string }>(event)
 
-  // TODO: 建立行程紀錄、開始接收位置回報、通知已連結的照顧者「行程開始」
-  db.trip = {
-    ...db.trip,
+  const trip = {
     id: `t_${Date.now()}`,
-    status: 'on-trip',
-    destination: destination || db.trip.destination,
+    familyId,
+    memberId: user.id,
+    status: 'on-trip' as const,
+    destination: destination || '未指定目的地',
+    eta: '',
+    currentLocation: 'Main St. near 4th Ave',
     startedAt: nowHHMM(),
     events: [
       {
@@ -16,10 +21,16 @@ export default defineEventHandler(async (event) => {
         time: nowHHMM(),
         title: 'Trip Started',
         detail: `前往 ${destination}（route: ${routeId}）`,
-        kind: 'start',
+        kind: 'start' as const,
       },
     ],
   }
 
-  return db.trip
+  // demo：一個家庭同時只留一筆進行中的行程
+  const previous = await trips.list({ familyId })
+  await Promise.all(previous.map((t) => trips.remove(t.id)))
+  await trips.set(trip)
+
+  // TODO: 通知家庭裡的照顧者「行程開始」
+  return trip
 })

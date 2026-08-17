@@ -2,6 +2,8 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
   devtools: { enabled: true },
+  // nuxt-auth-utils：Google OAuth + 加密 session cookie
+  modules: ['nuxt-auth-utils'],
   css: ['~/assets/css/main.css'],
   app: {
     head: {
@@ -22,6 +24,8 @@ export default defineNuxtConfig({
     // 只有伺服器端（server/api/**）能讀到，對應 .env 的 GEMINI_API_KEY
     geminiApiKey: '',
     googleRoutesApiKey: '',
+    // Firebase Admin 服務帳戶（JSON 或 base64），對應 .env 的 NUXT_FIREBASE_SERVICE_ACCOUNT
+    firebaseServiceAccount: '',
     // 瀏覽器無法取得定位時使用的預設起點（地址或地名）。
     googleRoutesOrigin: '',
     public: {
@@ -29,6 +33,13 @@ export default defineNuxtConfig({
       apiBase: '/api',
       // TODO: 之後接 Google Maps JavaScript API 時填入（NUXT_PUBLIC_GOOGLE_MAPS_KEY）
       googleMapsKey: '',
+      // Firebase Web SDK 設定（可公開，安全性靠 Firebase 規則與後端驗證）
+      firebase: {
+        apiKey: '',
+        authDomain: '',
+        projectId: '',
+        appId: '',
+      },
     },
   },
 })

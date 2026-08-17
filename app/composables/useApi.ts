@@ -55,23 +55,31 @@ function mock<T>(data: T, delay = 220): Promise<T> {
 }
 
 function request<T>(url: string, options: Parameters<typeof $fetch>[1] = {}): Promise<T> {
-  // TODO: 接真後端時在這裡加上 Authorization header / 401 導回登入頁 / 統一錯誤處理
-  return $fetch<T>(url, { baseURL: '/api', ...options }) as Promise<T>
+  // 登入狀態放在 httpOnly cookie：
+  // SSR 時要用 useRequestFetch() 才會把瀏覽器的 cookie 一起帶去給 /api/**，
+  // 瀏覽器端的 $fetch 本來就會帶 cookie。
+  const fetcher = import.meta.server ? useRequestFetch() : $fetch
+  return fetcher<T>(url, { baseURL: '/api', ...options }) as Promise<T>
 }
 
 export const api = {
   /* ---------------------------------------------------------------- 帳號 */
 
-  async login(email: string, password: string): Promise<User> {
-    // TODO: 串接後端 —— POST /api/auth/login { email, password }，回傳 token 後存起來
-    if (!USE_MOCK) return request<User>('/auth/login', { method: 'POST', body: { email, password } })
-    return mock(email.includes('naijia') ? mockCaregiver : { ...mockUser, email })
+  /** Google 登入：前端拿到 Firebase idToken 後交給後端驗證並建立 session */
+  async loginWithFirebase(idToken: string): Promise<User> {
+    return request<User>('/auth/firebase', { method: 'POST', body: { idToken } })
   },
 
-  async signup(payload: { name: string; email: string; password: string }): Promise<User> {
-    // TODO: 串接後端 —— POST /api/auth/signup
-    if (!USE_MOCK) return request<User>('/auth/signup', { method: 'POST', body: payload })
-    return mock({ ...mockUser, name: payload.name, email: payload.email })
+  /** Demo 登入：沒有 Firebase 金鑰時也能把流程走完（POST /api/auth/demo） */
+  async demoLogin(role: Role = 'care-recipient'): Promise<User> {
+    if (!USE_MOCK) return request<User>('/auth/demo', { method: 'POST', body: { role } })
+    return mock(role === 'caregiver' ? mockCaregiver : mockUser)
+  },
+
+  async logout(): Promise<ApiOk> {
+    // 清掉 session cookie
+    if (!USE_MOCK) return request('/auth/logout', { method: 'POST' })
+    return mock({ ok: true } as ApiOk)
   },
 
   async getMe(): Promise<User> {

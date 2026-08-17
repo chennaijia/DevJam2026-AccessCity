@@ -10,7 +10,7 @@ const needLabels: Record<string, string> = {
 }
 
 async function signOut() {
-  logout()
+  await logout()
   await navigateTo('/login')
 }
 </script>
@@ -20,11 +20,18 @@ async function signOut() {
     <h1 class="head">Profile</h1>
 
     <div class="center stack-sm" style="align-items: center">
-      <span class="avatar">{{ user?.name?.[0] ?? 'K' }}</span>
+      <img v-if="user?.avatar" :src="user.avatar" alt="" class="avatar avatar--photo" />
+      <span v-else class="avatar">{{ user?.name?.[0] ?? 'K' }}</span>
       <div class="title-lg">{{ user?.name }}</div>
     </div>
 
     <div class="label">Account</div>
+    <UiCard v-if="user?.provider === 'google'" variant="soft" padding="12px 14px">
+      <div class="row" style="gap: 8px">
+        <AppIcon name="check" :size="16" />
+        <span class="muted">已使用 Google 帳號登入</span>
+      </div>
+    </UiCard>
     <!-- TODO: 串接後端 —— PATCH /api/me（修改姓名 / Email） -->
     <LinkRow label="Name" :value="user?.name ?? '—'" to="/profile" />
     <LinkRow label="Email" :value="user?.email ?? '—'" to="/profile" />

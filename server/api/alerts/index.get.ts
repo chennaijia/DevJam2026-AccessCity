@@ -1,6 +1,8 @@
-import { db } from '../../utils/store'
+import { alerts } from '../../utils/repo'
+import { requireFamilyId } from '../../utils/session'
 
-export default defineEventHandler(() => {
-  // TODO: 只回傳這位照顧者相關、且未處理的提醒；正式版建議改 SSE / 推播
-  return db.alerts
+export default defineEventHandler(async (event) => {
+  // 只回傳自己家庭的提醒；TODO: 正式版改推播 / SSE 主動更新
+  const list = await alerts.list({ familyId: await requireFamilyId(event) })
+  return list.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
 })

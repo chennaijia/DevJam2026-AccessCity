@@ -3,12 +3,19 @@
 const { members, selected, selectedId, load, select } = useCaregiver()
 const { pending, load: loadAlerts } = useAlerts()
 
-await load()
-await loadAlerts()
+// 平行取，避免 SSR 一個接一個等
+await Promise.all([load(), loadAlerts()])
 
-// TODO: 串接後端 —— GET /api/trips/overview、GET /api/trips/current（正式版帶 memberId）
-const { data: overview } = await useAsyncData('cg-overview', () => api.getWeeklyOverview())
-const { data: trip } = await useAsyncData('cg-trip', () => api.getCurrentTrip())
+const { data: dashboard } = await useAsyncData('cg-dashboard', async () => {
+  const [overview, trip] = await Promise.all([
+    api.getWeeklyOverview(),
+    api.getCurrentTrip().catch(() => null),
+  ])
+  return { overview, trip }
+})
+
+const overview = computed(() => dashboard.value?.overview ?? null)
+const trip = computed(() => dashboard.value?.trip ?? null)
 
 /** 企劃書 §7：照顧者要看到的是一段 Journey，不是單純的 GPS 點位 */
 const onTrip = computed(() => trip.value?.status === 'on-trip')

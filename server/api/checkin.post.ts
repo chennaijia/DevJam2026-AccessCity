@@ -1,4 +1,5 @@
-import { db, nowHHMM } from '../utils/store'
+import { alerts, checkins, trips } from '../utils/repo'
+import { nowHHMM, requireAppUser, requireFamilyId } from '../utils/session'
 
 /**
  * Care Agent 的 Check-in：Detect → Ask → Wait → Escalate（企劃書 §4.7）
@@ -7,9 +8,16 @@ import { db, nowHHMM } from '../utils/store'
  *   no-response  等待逾時未回覆 → 同樣升級為 Care Alert（來源標成「未回覆」）
  */
 export default defineEventHandler(async (event) => {
+  const user = await requireAppUser(event)
+  const familyId = await requireFamilyId(event)
   const { answer } = await readBody<{ answer: 'ok' | 'need-help' | 'no-response' }>(event)
 
-  db.checkins.push({ id: `c_${Date.now()}`, answer, createdAt: new Date().toISOString() })
+  await checkins.set({
+    id: `c_${Date.now()}`,
+    userId: user.id,
+    answer,
+    createdAt: new Date().toISOString(),
+  })
 
   const titleByAnswer = {
     ok: 'Check-in: I am OK',
@@ -17,38 +25,48 @@ export default defineEventHandler(async (event) => {
     'no-response': 'Check-in: No response',
   } as const
 
-  db.trip.events.push({
-    id: `e_${Date.now()}`,
-    time: nowHHMM(),
-    title: titleByAnswer[answer] ?? 'Check-in',
-    detail:
-      answer === 'ok'
-        ? '使用者回覆沒事'
-        : answer === 'need-help'
-          ? '使用者要求協助，已通知照顧者'
-          : '詢問後未回覆，已升級通知照顧者',
-    kind: 'checkin',
-  })
+  // 寫進行程時間軸，照顧者端看得到
+  const [trip] = await trips.list({ familyId })
+  if (trip) {
+    await trips.update(trip.id, {
+      events: [
+        ...trip.events,
+        {
+          id: `e_${Date.now()}`,
+          time: nowHHMM(),
+          title: titleByAnswer[answer] ?? 'Check-in',
+          detail:
+            answer === 'ok'
+              ? '使用者回覆沒事'
+              : answer === 'need-help'
+                ? '使用者要求協助，已通知照顧者'
+                : '詢問後未回覆，已升級通知照顧者',
+          kind: 'checkin',
+        },
+      ],
+    })
+  }
 
   if (answer !== 'ok') {
     const escalated = answer === 'no-response'
-    db.alerts.unshift({
+    await alerts.set({
       id: `al_${Date.now()}`,
+      familyId,
       kind: 'safety-check',
-      memberId: 'm_kai',
-      memberName: 'Kai',
+      memberId: user.id,
+      memberName: user.name,
       title: 'Safety Alert',
       message: escalated
-        ? 'Kai has not responded to the safety check.'
-        : 'Kai asked for help during a safety check.',
+        ? `${user.name} has not responded to the safety check.`
+        : `${user.name} asked for help during a safety check.`,
       sourceLabel: escalated ? 'Automatic Safety Alert' : 'Self Check-in',
-      location: db.trip.currentLocation,
+      location: trip?.currentLocation ?? 'Main St. near 4th Ave',
       time: `${nowHHMM()} · just now`,
       lastMovement: 'just now',
       acknowledged: false,
+      createdAt: new Date().toISOString(),
     })
-
-    // TODO: 推播給所有已連結的照顧者（FCM / APNs）
+    // TODO: 推播給照顧者（FCM）
   }
 
   return { ok: true, escalated: answer !== 'ok' }

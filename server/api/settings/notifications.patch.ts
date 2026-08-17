@@ -1,14 +1,17 @@
 import type { NotificationSettings } from '#shared/types/accessity'
-import { db } from '../../utils/store'
+import { ensureUserSeed, settings } from '../../utils/repo'
+import { requireAppUser } from '../../utils/session'
 
 export default defineEventHandler(async (event) => {
+  const user = await requireAppUser(event)
+  await ensureUserSeed(user.id)
+
   const body = await readBody<Partial<NotificationSettings>>(event)
+  const current = await settings.get(user.id)
+  if (!current) throw createError({ statusCode: 404, statusMessage: '找不到通知設定' })
 
-  // TODO: 依登入者身分只允許改自己那一區塊的設定
-  db.settings = {
-    caregiver: { ...db.settings.caregiver, ...body.caregiver },
-    recipient: { ...db.settings.recipient, ...body.recipient },
-  }
-
-  return db.settings
+  return await settings.update(user.id, {
+    caregiver: { ...current.caregiver, ...body.caregiver },
+    recipient: { ...current.recipient, ...body.recipient },
+  })
 })

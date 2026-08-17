@@ -1,6 +1,7 @@
-import { db } from '../../utils/store'
+import { notifications } from '../../utils/repo'
+import { requireAppUser } from '../../utils/session'
 
-export default defineEventHandler(() => {
-  // TODO: 只回傳目前使用者的通知，並支援分頁
-  return db.notifications
+export default defineEventHandler(async (event) => {
+  const user = await requireAppUser(event)
+  return await notifications.list({ userId: user.id })
 })

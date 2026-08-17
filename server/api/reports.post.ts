@@ -1,11 +1,14 @@
-import { db } from '../utils/store'
+import { reports } from '../utils/repo'
+import { requireAppUser } from '../utils/session'
 
 export default defineEventHandler(async (event) => {
+  const user = await requireAppUser(event)
   const body = await readBody<{ type: string; note: string }>(event)
 
-  // TODO: 存進資料庫並記錄座標；同類回報累積到門檻後，讓路線評分自動扣分
-  db.reports.push({
+  // TODO: 加上座標與照片上傳（Firebase Storage），並回饋到路線評分
+  await reports.set({
     id: `r_${Date.now()}`,
+    userId: user.id,
     type: body.type,
     note: body.note ?? '',
     createdAt: new Date().toISOString(),

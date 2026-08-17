@@ -1,10 +1,12 @@
-import { db } from '../../utils/store'
+import { users } from '../../utils/repo'
+import { invalidateUserCache, requireAppUser } from '../../utils/session'
 
 export default defineEventHandler(async (event) => {
+  const user = await requireAppUser(event)
   const { keys } = await readBody<{ keys: string[] }>(event)
 
-  // TODO: 寫入資料庫並設定 expiresAt（隔天自動失效），路線規劃時一併帶入
-  db.todayNeeds = keys ?? []
-
-  return { ok: true, keys: db.todayNeeds }
+  // TODO: 加上 expiresAt，隔天自動清空
+  invalidateUserCache(user.id)
+  const updated = await users.update(user.id, { todayNeeds: keys ?? [] })
+  return { ok: true, keys: updated.todayNeeds }
 })
