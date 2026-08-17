@@ -8,6 +8,7 @@ import {
   mockFamily,
   mockMembers,
   mockNotificationSettings,
+  mockNotifications,
   mockRecentTrips,
   mockRoutes,
   mockShelters,
@@ -16,6 +17,7 @@ import {
   mockWeeklyOverview,
 } from '#shared/mock/data'
 import type {
+  AppNotification,
   CareAlert,
   Family,
   Member,
@@ -40,6 +42,7 @@ interface Db {
   todayNeeds: string[]
   overview: WeeklyOverview
   alerts: CareAlert[]
+  notifications: AppNotification[]
   settings: NotificationSettings
   reports: { id: string; type: string; note: string; createdAt: string }[]
   checkins: { id: string; answer: string; createdAt: string }[]
@@ -57,6 +60,7 @@ export const db: Db = {
   todayNeeds: [],
   overview: structuredClone(mockWeeklyOverview),
   alerts: structuredClone(mockAlerts),
+  notifications: structuredClone(mockNotifications),
   settings: structuredClone(mockNotificationSettings),
   reports: [],
   checkins: [],

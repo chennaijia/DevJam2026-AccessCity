@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{ name: 'map' | 'report' | 'home' | 'mimo' | 'profile' }>()
+import type { NavIconName } from '#shared/types/nav'
+
+defineProps<{ name: NavIconName }>()
 </script>
 
 <template>
@@ -12,6 +14,10 @@ defineProps<{ name: 'map' | 'report' | 'home' | 'mimo' | 'profile' }>()
     <template v-else-if="name === 'report'">
       <path d="M12 3.5 22 20H2L12 3.5Z" />
       <path d="M12 10v4M12 17h.01" />
+    </template>
+    <template v-else-if="name === 'bell'">
+      <path d="M6.5 9a5.5 5.5 0 0 1 11 0c0 5 2 6.5 2 6.5H4.5S6.5 14 6.5 9Z" />
+      <path d="M10.2 19a2 2 0 0 0 3.6 0" />
     </template>
     <template v-else-if="name === 'home'">
       <path d="M3 10.5 12 3l9 7.5" />

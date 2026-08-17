@@ -11,6 +11,7 @@
 import type {
   AccessNeed,
   ApiOk,
+  AppNotification,
   CareAlert,
   Family,
   Member,
@@ -32,6 +33,7 @@ import {
   mockFamily,
   mockMembers,
   mockNotificationSettings,
+  mockNotifications,
   mockRecentTrips,
   mockRequirementChips,
   mockRoutes,
@@ -252,6 +254,26 @@ export const api = {
   async reportIssue(payload: { type: string; note: string }): Promise<ApiOk> {
     // TODO: 串接後端 —— POST /api/reports（使用者回報障礙物 / 施工）
     if (!USE_MOCK) return request('/reports', { method: 'POST', body: payload })
+    return mock({ ok: true } as ApiOk)
+  },
+
+  /* -------------------------------------------------------------- 通知 */
+
+  async getNotifications(): Promise<AppNotification[]> {
+    // TODO: 串接後端 —— GET /api/notifications（正式版改推播 + 這支拿歷史）
+    if (!USE_MOCK) return request<AppNotification[]>('/notifications')
+    return mock(mockNotifications)
+  },
+
+  async markNotificationRead(id: string): Promise<ApiOk> {
+    // TODO: 串接後端 —— POST /api/notifications/:id/read
+    if (!USE_MOCK) return request(`/notifications/${id}/read`, { method: 'POST' })
+    return mock({ ok: true } as ApiOk)
+  },
+
+  async markAllNotificationsRead(): Promise<ApiOk> {
+    // TODO: 串接後端 —— POST /api/notifications/read-all
+    if (!USE_MOCK) return request('/notifications/read-all', { method: 'POST' })
     return mock({ ok: true } as ApiOk)
   },
 

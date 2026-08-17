@@ -1,5 +1,10 @@
 <script setup lang="ts">
-const { setUser, applyPendingRole, homePath } = useSession()
+const { setUser, applyPendingRole, homePath, pendingRole } = useSession()
+
+/** 第一頁選的身分，讓使用者知道自己正以什麼身分登入，也可以退回去改 */
+const roleLabel = computed(() =>
+  pendingRole.value === 'caregiver' ? '照顧者' : pendingRole.value ? '被照顧者' : '',
+)
 
 const email = ref('')
 const password = ref('')
@@ -26,9 +31,17 @@ async function login() {
 
 <template>
   <section class="screen login">
+    <button type="button" class="login__back" aria-label="返回選擇身分" @click="navigateTo('/onboarding/welcome')">
+      ←
+    </button>
+
     <div class="login__brand center">
       <h1 class="brand" style="font-size: 34px">Accessity</h1>
       <p class="body">Reachable routes for everyone.</p>
+      <p v-if="roleLabel" class="login__role">
+        以 <b>{{ roleLabel }}</b> 身分登入 ·
+        <NuxtLink to="/onboarding/welcome">重新選擇</NuxtLink>
+      </p>
     </div>
 
     <form class="stack" @submit.prevent="login">
@@ -67,6 +80,29 @@ async function login() {
   justify-content: center;
   gap: 22px;
   padding-top: 64px;
+}
+
+.login__back {
+  position: absolute;
+  top: 16px;
+  left: 12px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.login__role {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.login__role a {
+  font-weight: 700;
 }
 
 .login__brand {

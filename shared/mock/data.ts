@@ -4,6 +4,7 @@
  * 之後接真實資料庫時，只要換掉 server 端的資料來源即可。
  */
 import type {
+  AppNotification,
   CareAlert,
   Family,
   Member,
@@ -250,6 +251,55 @@ export const mockAlerts: CareAlert[] = [
     time: '16:42 · just now',
     lastMovement: '18 minutes ago',
     acknowledged: false,
+  },
+]
+
+export const mockNotifications: AppNotification[] = [
+  {
+    id: 'n_1',
+    kind: 'check-in',
+    title: '你還好嗎？',
+    message: '你在同一個地方停留超過 15 分鐘，需要幫忙嗎？',
+    time: '剛剛',
+    read: false,
+    actionTo: '/map/navigate',
+    actionLabel: '回覆',
+  },
+  {
+    id: 'n_2',
+    kind: 'caregiver',
+    title: '陳乃嘉 正在前往',
+    message: '你的照顧者已收到提醒，正在過去找你。',
+    time: '3 分鐘前',
+    read: false,
+  },
+  {
+    id: 'n_3',
+    kind: 'route',
+    title: '路線已調整',
+    message: '前方 Main St 施工，已幫你改走無障礙替代道路。',
+    time: '16:32',
+    read: true,
+    actionTo: '/map/routes',
+    actionLabel: '看路線',
+  },
+  {
+    id: 'n_4',
+    kind: 'arrival',
+    title: '安全抵達',
+    message: '已把「抵達 Community Center」的訊息傳給陳乃嘉。',
+    time: '昨天 16:28',
+    read: true,
+  },
+  {
+    id: 'n_5',
+    kind: 'invite',
+    title: '家庭邀請',
+    message: '陳乃嘉 邀請你加入 Chuang Family。',
+    time: '週一',
+    read: true,
+    actionTo: '/onboarding/connect',
+    actionLabel: '查看',
   },
 ]
 

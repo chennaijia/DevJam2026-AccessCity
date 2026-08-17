@@ -2,7 +2,10 @@
 /** App 第一頁：選擇身分（Navigator / Caregiver / Others），接著才是登入 */
 const { pendingRole } = useSession()
 
-const selected = ref('')
+// 從登入頁退回來時，先前選的身分要維持選中狀態
+const selected = ref(
+  pendingRole.value === 'caregiver' ? 'caregiver' : pendingRole.value ? 'navigator' : '',
+)
 
 const roles = [
   {

@@ -15,13 +15,27 @@ const notifications = reactive({
   emergency: member.value?.notifications.emergency ?? true,
 })
 
-// TODO: 串接後端 —— PATCH /api/members/:id（停留提醒門檻與通知開關）
-watch([stayMinutes, notifications], () => {
-  api.updateMemberSettings(id, {
-    stayAlertMinutes: stayMinutes.value,
-    notifications: { ...notifications },
-  })
-}, { deep: true })
+const saved = ref(false)
+let savedTimer: ReturnType<typeof setTimeout> | undefined
+
+// PATCH /api/members/:id（停留提醒門檻與通知開關）—— 自動儲存並給使用者回饋
+watch(
+  [stayMinutes, notifications],
+  async () => {
+    await api.updateMemberSettings(id, {
+      stayAlertMinutes: stayMinutes.value,
+      notifications: { ...notifications },
+    })
+    saved.value = true
+    clearTimeout(savedTimer)
+    savedTimer = setTimeout(() => (saved.value = false), 1800)
+  },
+  { deep: true },
+)
+
+const { pending, load: loadAlerts } = useAlerts()
+await loadAlerts()
+const memberAlerts = computed(() => pending.value.filter((a) => a.memberId === id))
 
 function call() {
   // TODO: 正式版改成 tel: 連結或 VoIP；此處先留接口
@@ -57,7 +71,30 @@ function call() {
       </ul>
     </UiCard>
 
-    <div class="label">Notify me if {{ member?.name }} stays in the same area for</div>
+    <!-- 這位成員未處理的提醒，直接從詳情頁進去處理 -->
+    <UiCard
+      v-for="a in memberAlerts"
+      :key="a.id"
+      :variant="a.kind === 'emergency' ? 'danger' : 'soft'"
+      padding="12px 16px"
+      :to="`/caregiver/alerts/${a.id}`"
+    >
+      <div class="row-between">
+        <div class="row" style="gap: 8px">
+          <AppIcon name="warn" :size="18" />
+          <div>
+            <div class="title-md">{{ a.title }}</div>
+            <div class="muted">{{ a.time }}</div>
+          </div>
+        </div>
+        <span style="font-size: 22px; color: var(--ink-soft)">›</span>
+      </div>
+    </UiCard>
+
+    <div class="row-between">
+      <span class="label">Notify me if {{ member?.name }} stays in the same area for</span>
+      <span v-if="saved" class="saved">已儲存</span>
+    </div>
     <div class="row" style="flex-wrap: wrap">
       <UiChip
         v-for="opt in stayOptions"
@@ -86,6 +123,12 @@ function call() {
 </template>
 
 <style scoped>
+.saved {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green-strong);
+}
+
 .timeline {
   margin: 10px 0 0;
   padding: 0;

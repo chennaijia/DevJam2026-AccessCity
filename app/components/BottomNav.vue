@@ -2,32 +2,55 @@
 import type { NavIconName } from '#shared/types/nav'
 
 const { isCaregiver } = useSession()
+const { pending, load } = useAlerts()
+const { unread, load: loadNotifications } = useNotifications()
 const route = useRoute()
 
+// 分頁紅點：照顧者看未處理提醒，被照顧者看未讀通知
+if (isCaregiver.value) load()
+else loadNotifications()
+
 /**
- * 照顧者的未處理提醒數量 → 顯示在 Profile 分頁的紅點。
- * TODO: 串接後端 —— GET /api/alerts（正式版改推播 / SSE 主動更新）
+ * 分頁依角色不同：
+ * 被照顧者需要的是「找路 / 回報 / 求助」，照顧者需要的是「誰要注意 / 家人 / 提醒」。
  */
-const { data: alerts } = useAsyncData('nav-alerts', () => api.getAlerts())
-const alertCount = computed(() =>
-  isCaregiver.value ? (alerts.value?.filter((a) => !a.acknowledged).length ?? 0) : 0,
+const items = computed<{ name: NavIconName; label: string; to: string; badge?: number }[]>(() =>
+  isCaregiver.value
+    ? [
+        { name: 'home', label: 'Home', to: '/home' },
+        { name: 'map', label: 'Members', to: '/caregiver' },
+        { name: 'report', label: 'Alerts', to: '/caregiver/alerts', badge: pending.value.length },
+        { name: 'mimo', label: 'Mimo', to: '/mimo' },
+        { name: 'profile', label: 'Profile', to: '/profile' },
+      ]
+    : [
+        { name: 'map', label: 'Map', to: '/map' },
+        {
+          name: 'bell',
+          label: 'Notification',
+          to: '/notifications',
+          badge: unread.value.length,
+        },
+        { name: 'home', label: 'Home', to: '/home' },
+        { name: 'mimo', label: 'Mimo', to: '/mimo' },
+        { name: 'profile', label: 'Profile', to: '/profile' },
+      ],
 )
 
-const items = computed<{ name: NavIconName; label: string; to: string; badge?: number }[]>(() => [
-  { name: 'map', label: 'Map', to: '/map' },
-  { name: 'report', label: 'Report', to: '/report' },
-  { name: 'home', label: 'Home', to: '/home' },
-  { name: 'mimo', label: 'Mimo', to: '/mimo' },
-  {
-    name: 'profile',
-    label: 'Profile',
-    to: isCaregiver.value ? '/caregiver' : '/profile',
-    badge: alertCount.value,
-  },
-])
+/**
+ * 取最精確的一個分頁當作 active：
+ * /caregiver/alerts 同時符合 Members(/caregiver) 與 Alerts(/caregiver/alerts)，
+ * 沒有這段的話會亮錯分頁。
+ */
+const activeTo = computed(() => {
+  const matched = items.value
+    .filter((i) => route.path === i.to || route.path.startsWith(`${i.to}/`))
+    .sort((a, b) => b.to.length - a.to.length)
+  return matched[0]?.to
+})
 
 function isActive(to: string) {
-  return route.path === to || route.path.startsWith(`${to}/`)
+  return activeTo.value === to
 }
 </script>
 

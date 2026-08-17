@@ -136,6 +136,27 @@ export interface WeeklyOverview {
   recentActivity: { id: string; title: string; detail: string; kind: string }[]
 }
 
+/** 被照顧者端的通知（Check-in 詢問、照顧者回覆、路線調整、抵達…） */
+export type NotificationKind =
+  | 'check-in'
+  | 'caregiver'
+  | 'route'
+  | 'arrival'
+  | 'invite'
+  | 'system'
+
+export interface AppNotification {
+  id: string
+  kind: NotificationKind
+  title: string
+  message: string
+  time: string
+  read: boolean
+  /** 點下去要前往的頁面，沒有就只是純通知 */
+  actionTo?: string
+  actionLabel?: string
+}
+
 export type AlertKind = 'safety-check' | 'emergency' | 'stationary'
 
 export interface CareAlert {

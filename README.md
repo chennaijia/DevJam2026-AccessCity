@@ -66,20 +66,27 @@ shared/
 | `/shelters`                 | 避難所可達性比較                                 |
 | `/home`                     | **主頁**（登入後落地）：被照顧者看現在位置／常用地點／今日狀況／已儲存需求／最近紀錄；照顧者看即時位置與統計 |
 | `/mimo`                     | Mimo 對話（Requirement Agent）                   |
-| `/report`                   | 路況回報                                         |
+| `/notifications`            | 通知中心（Check-in 詢問、照顧者回覆、路線調整…） |
+| `/report`                   | 路況回報（從通知中心或導航頁的 Report Issue 進入）|
 | `/profile`                  | 個人檔案                                         |
 | `/settings/notifications`   | 通知設定                                         |
 | `/caregiver`                | Caregiver Dashboard（家庭、成員列表）            |
 | `/caregiver/members/:id`    | 成員詳情（位置、電量、停留提醒、通知開關）       |
-| `/caregiver/alerts/safety`  | Safety Alert（自動安全檢查未回覆）               |
-| `/caregiver/alerts/emergency` | Emergency Alert（手動 SOS）                    |
+| `/caregiver/alerts`         | 提醒中心（待處理 / 已處理）                      |
+| `/caregiver/alerts/:id`     | 提醒詳情（安全檢查未回覆 / 緊急求助 / 長時間停留）|
 
 Demo 動線：`/`（自動導到 `/onboarding/welcome` 選身分）→ `/login` → `/home`（兩種角色都落在主頁）。
 - 被照顧者：`/home`（現在位置／常用地點／今日狀況）→ `/map/plan?to=台大醫院` → `/map/routes` → `/map/navigate` → `/map/arrived`
-- 照顧者：`/home`（即時位置與統計）→ Profile 分頁 `/caregiver` → 成員詳情 → `/caregiver/alerts/safety`
+- 照顧者：`/home`（需要注意的提醒 → 關注對象切換 → 即時位置 → 統計）→ `Members` 分頁 `/caregiver` → 成員詳情 → `Alerts` 分頁 `/caregiver/alerts` → 提醒詳情回覆
 - 走註冊：`/login` → Sign Up → 需求勾選 → 連結照顧者 / 家庭代碼 → 主頁
 
 身分在第一頁就選好，存在 session 的 `pendingRole`，登入或註冊成功後才寫回帳號（`PATCH /api/me`）。
+
+底部分頁依角色不同：被照顧者是 `Map / Notification / Home / Mimo / Profile`，照顧者是 `Home / Members / Alerts / Mimo / Profile`。
+紅點分別來自 `useNotifications()`（被照顧者的未讀通知）與 `useAlerts()`（照顧者的未處理提醒），
+兩者都是共用狀態，讀取或回覆之後導覽列與各頁面會同步更新。
+
+Demo 想切換成照顧者：用 `naijia@example.com` 登入（後端 `POST /api/auth/login` 會回傳照顧者帳號）。
 
 導航頁左下角有 **「模擬停留 15 分鐘」** 按鈕（`<SafetyOverlay demo />`），用來在 demo 時觸發 Check-in 對話框；其他畫面只會顯示 SOS 浮動按鈕。
 
@@ -147,6 +154,9 @@ async getRoutes(destination, needs) {
 | POST   | `/api/alerts/:id/respond`         | 照顧者回覆（正在前往 / 已收到）  |
 | POST   | `/api/checkin`                    | Check-in 回覆（I'm OK / 需要幫忙）|
 | POST   | `/api/reports`                    | 路況回報                         |
+| GET    | `/api/notifications`              | 通知清單                         |
+| POST   | `/api/notifications/:id/read`     | 標記單則已讀                     |
+| POST   | `/api/notifications/read-all`     | 全部標記已讀                     |
 | GET    | `/api/settings/notifications`     | 通知設定                         |
 | PATCH  | `/api/settings/notifications`     | 更新通知設定                     |
 

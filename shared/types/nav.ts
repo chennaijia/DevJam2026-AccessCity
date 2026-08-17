@@ -1,1 +1,1 @@
-export type NavIconName = 'map' | 'report' | 'home' | 'mimo' | 'profile'
+export type NavIconName = 'map' | 'report' | 'bell' | 'home' | 'mimo' | 'profile'

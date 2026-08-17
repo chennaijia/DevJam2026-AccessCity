@@ -1,7 +1,22 @@
 <script setup lang="ts">
-// TODO: 串接後端 —— GET /api/family、GET /api/members（正式版建議用 SSE / WebSocket 即時更新狀態）
+// TODO: 串接後端 —— GET /api/family（成員狀態正式版建議用 SSE / WebSocket 即時更新）
 const { data: family } = await useAsyncData('caregiver-family', () => api.getFamily())
-const { data: members } = await useAsyncData('caregiver-members', () => api.getMembers())
+
+const { members, load, select } = useCaregiver()
+const { pending, load: loadAlerts } = useAlerts()
+await load(true)
+await loadAlerts()
+
+/** 每位成員身上還沒處理的提醒數量 */
+function alertsOf(memberId: string) {
+  return pending.value.filter((a) => a.memberId === memberId).length
+}
+
+/** 點成員時同時把主頁的關注對象切過去 */
+function openMember(id: string) {
+  select(id)
+  return navigateTo(`/caregiver/members/${id}`)
+}
 </script>
 
 <template>
@@ -24,7 +39,8 @@ const { data: members } = await useAsyncData('caregiver-members', () => api.getM
       v-for="m in members"
       :key="m.id"
       padding="14px 16px"
-      :to="`/caregiver/members/${m.id}`"
+      style="cursor: pointer"
+      @click="openMember(m.id)"
     >
       <div class="row-between">
         <div class="row">
@@ -34,7 +50,10 @@ const { data: members } = await useAsyncData('caregiver-members', () => api.getM
             <div class="muted">{{ m.needsLabel }}</div>
           </div>
         </div>
-        <UiChip :tone="m.status === 'safe' ? 'green' : 'yellow'">{{ m.statusLabel }}</UiChip>
+        <div class="row" style="gap: 6px">
+          <UiChip v-if="alertsOf(m.id)" tone="red">{{ alertsOf(m.id) }} 則提醒</UiChip>
+          <UiChip :tone="m.status === 'safe' ? 'green' : 'yellow'">{{ m.statusLabel }}</UiChip>
+        </div>
       </div>
 
       <div style="margin-top: 10px">
@@ -51,6 +70,7 @@ const { data: members } = await useAsyncData('caregiver-members', () => api.getM
       </div>
     </UiCard>
 
+    <UiButton variant="outline" to="/caregiver/alerts">提醒中心</UiButton>
     <UiButton variant="outline" to="/settings/notifications">Notification Rules</UiButton>
     <!-- TODO: 串接後端 —— POST /api/family/invites（寄出邀請） -->
     <UiButton to="/onboarding/family-code">Invite Member</UiButton>

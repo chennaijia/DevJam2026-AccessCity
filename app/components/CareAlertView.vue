@@ -3,13 +3,22 @@ import type { CareAlert } from '#shared/types/accessity'
 
 const props = defineProps<{ alert: CareAlert }>()
 
-const responded = ref(false)
+const { respond: respondAlert } = useAlerts()
+
+const responded = ref(props.alert.acknowledged)
+const sending = ref(false)
 
 async function respond(action: 'responding' | 'received') {
-  // TODO: 串接後端 —— POST /api/alerts/:id/respond { action }
-  //       'responding' 會讓被照顧者端顯示「家人正在前往」
-  await api.respondAlert(props.alert.id, action)
-  responded.value = true
+  sending.value = true
+  try {
+    // POST /api/alerts/:id/respond —— 'responding' 會讓被照顧者端顯示「家人正在前往」
+    // 回覆後同步更新共用的提醒狀態，導覽列紅點與提醒中心會一起變
+    await respondAlert(props.alert.id, action)
+    responded.value = true
+    if (action === 'received') await navigateTo('/caregiver/alerts')
+  } finally {
+    sending.value = false
+  }
 }
 </script>
 
@@ -37,13 +46,18 @@ async function respond(action: 'responding' | 'received') {
 
       <div class="row">
         <UiButton>Call</UiButton>
-        <UiButton variant="outline" to="/caregiver">View Location</UiButton>
+        <UiButton variant="outline" :to="`/caregiver/members/${alert.memberId}`">
+          View Location
+        </UiButton>
       </div>
 
-      <UiButton variant="green" @click="respond('responding')">
-        {{ responded ? '✓ 已回覆：我正在前往' : "I'm Responding" }}
+      <UiButton variant="green" :disabled="sending" @click="respond('responding')">
+        <AppIcon v-if="responded" name="check" :size="18" />
+        {{ responded ? '已回覆：我正在前往' : "I'm Responding" }}
       </UiButton>
-      <UiButton variant="ghost" @click="respond('received')">Confirm Received</UiButton>
+      <UiButton variant="ghost" :disabled="sending" @click="respond('received')">
+        Confirm Received
+      </UiButton>
     </div>
 
     <BottomNav />

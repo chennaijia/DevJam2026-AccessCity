@@ -10,7 +10,9 @@ const explain = ref(false)
     <header class="row-between" style="padding: 12px 16px">
       <button class="icon-btn" aria-label="選單"><AppIcon name="menu" :size="22" /></button>
       <h1 class="brand">Accessity</h1>
-      <button class="icon-btn" aria-label="通知"><AppIcon name="bell" :size="22" /></button>
+      <button class="icon-btn" aria-label="通知" @click="navigateTo('/notifications')">
+        <AppIcon name="bell" :size="22" />
+      </button>
     </header>
 
     <MapCanvas height="230px" show-flood class="map" :markers="[

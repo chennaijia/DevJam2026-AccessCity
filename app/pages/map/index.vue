@@ -37,7 +37,7 @@ async function startPlanning() {
       <header class="row-between">
         <button class="icon-btn" aria-label="選單"><AppIcon name="menu" :size="22" /></button>
         <h1 class="brand">Accessity</h1>
-        <button class="icon-btn" aria-label="通知" @click="navigateTo('/caregiver/alerts/safety')">
+        <button class="icon-btn" aria-label="通知" @click="navigateTo('/notifications')">
           <AppIcon name="bell" :size="22" />
         </button>
       </header>
