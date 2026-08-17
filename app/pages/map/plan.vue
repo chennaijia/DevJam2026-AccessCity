@@ -35,6 +35,9 @@ const todayChips = computed(() =>
 /** 有沒有真的解析出「目的地」，不是隨便把整句話當地點 */
 const hasDestination = computed(() => chips.value.some((c) => c.key === 'destination' && c.label.trim()))
 
+/** origin 用下面獨立的欄位顯示/編輯，不要在需求 chips 裡重複出現一次 */
+const displayChips = computed(() => chips.value.filter((c) => c.key !== 'origin'))
+
 async function parse() {
   if (!text.value.trim()) return
   loading.value = true
@@ -45,8 +48,9 @@ async function parse() {
     // 沒解析出目的地就不要硬把整句話當成地點——不然「輪椅」這種沒提到地點的話會被拿去查地址
     const destinationChip = chips.value.find((c) => c.key === 'destination')?.label
     if (destinationChip) destination.value = destinationChip
-    // 有明確講出發點（「從政大到動物園」）才覆蓋，沒講就維持用目前定位
-    originPlace.value = chips.value.find((c) => c.key === 'origin')?.label ?? ''
+    // 有明確講出發點（「從政大到動物園」）才覆蓋——沒講的話不要清掉，可能是使用者自己在下面的欄位打的
+    const originChip = chips.value.find((c) => c.key === 'origin')?.label
+    if (originChip) originPlace.value = originChip
     parsed.value = true
   } finally {
     loading.value = false
@@ -131,6 +135,15 @@ if (initialDestination) await parse()
     </UiCard>
 
     <UiCard padding="14px 16px">
+      <div class="origin-row">
+        <AppIcon name="pin" :size="16" />
+        <input
+          v-model="originPlace"
+          class="origin-input"
+          placeholder="出發點（留空 = 使用目前定位）"
+          aria-label="輸入出發點"
+        />
+      </div>
       <textarea
         v-model="text"
         class="need-input"
@@ -166,8 +179,8 @@ if (initialDestination) await parse()
     <template v-else>
       <div class="label">AI 解析出的需求</div>
       <div class="row" style="flex-wrap: wrap">
-        <UiChip v-for="c in chips" :key="c.key" tone="green" as="button" @click="removeChip(c.key)">
-          {{ c.key === 'origin' ? `從 ${c.label} 出發` : c.label }} ✕
+        <UiChip v-for="c in displayChips" :key="c.key" tone="green" as="button" @click="removeChip(c.key)">
+          {{ c.label }} ✕
         </UiChip>
       </div>
 
@@ -194,6 +207,26 @@ if (initialDestination) await parse()
 </template>
 
 <style scoped>
+.origin-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.origin-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--ink);
+}
+
 .need-input {
   width: 100%;
   border: none;

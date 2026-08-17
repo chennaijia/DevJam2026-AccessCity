@@ -142,27 +142,16 @@ export const api = {
     /** 使用者明確講出來的出發點（例如「從政大到動物園」），有值就取代目前定位當起點 */
     originText?: string,
   ): Promise<RouteOption[]> {
-    // TODO: 串接後端 —— GET /api/routes?destination=&needs=&today=
-    //       後端負責呼叫 Google Routes API + 施工／無障礙資料，回傳排序後的路線。
-    //       needs = 固定需求（輪椅/視障…），today = 今日需求（腳痠、想避開施工…）
-    if (!USE_MOCK)
-      return request<RouteOption[]>('/routes', {
-        query: {
-          destination,
-          needs: needs.join(','),
-          today: todayNeeds.join(','),
-          ...(origin ? { originLat: origin.lat, originLng: origin.lng } : {}),
-          ...(destCoords ? { destLat: destCoords.lat, destLng: destCoords.lng } : {}),
-          ...(originText ? { origin: originText } : {}),
-        },
-      })
-    return mock(mockRoutes, 400)
+    // 後端負責呼叫 Google Routes API + 施工／無障礙資料，回傳排序後的路線。
+    // needs = 固定需求（輪椅/視障…），today = 今日需求（腳痠、想避開施工…）
     return request<RouteOption[]>('/routes', {
       query: {
         destination,
         needs: needs.join(','),
         today: todayNeeds.join(','),
         ...(origin ? { originLat: origin.lat, originLng: origin.lng } : {}),
+        ...(destCoords ? { destLat: destCoords.lat, destLng: destCoords.lng } : {}),
+        ...(originText ? { origin: originText } : {}),
       },
     })
   },
@@ -183,19 +172,15 @@ export const api = {
   },
 
   async addSavedPlace(payload: { label: string; address: string; icon?: SavedPlace['icon'] }): Promise<SavedPlace> {
-    if (!USE_MOCK) return request<SavedPlace>('/places', { method: 'POST', body: payload })
-    return mock({ id: `p_${Date.now()}`, icon: 'pin', ...payload })
+    return request<SavedPlace>('/places', { method: 'POST', body: payload })
   },
 
   async updateSavedPlace(id: string, patch: Partial<SavedPlace>): Promise<SavedPlace> {
-    if (!USE_MOCK) return request<SavedPlace>(`/places/${id}`, { method: 'PATCH', body: patch })
-    const target = mockSavedPlaces.find((p) => p.id === id)!
-    return mock({ ...target, ...patch })
+    return request<SavedPlace>(`/places/${id}`, { method: 'PATCH', body: patch })
   },
 
   async deleteSavedPlace(id: string): Promise<ApiOk> {
-    if (!USE_MOCK) return request(`/places/${id}`, { method: 'DELETE' })
-    return mock({ ok: true } as ApiOk)
+    return request(`/places/${id}`, { method: 'DELETE' })
   },
 
   async getTodayNeedOptions(): Promise<TodayNeedOption[]> {
