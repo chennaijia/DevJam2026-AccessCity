@@ -14,35 +14,35 @@ async function shareStatus() {
       <span class="sparkle sparkle--a">★</span>
       <span class="sparkle sparkle--b">✦</span>
       <MimoMascot :size="150" />
-      <p class="arrived__title">Safe Arrival</p>
+      <p class="arrived__title">平安抵達</p>
     </div>
 
     <UiCard variant="soft" padding="14px 16px">
       <div class="row">
         <span class="dot"><AppIcon name="house" :size="20" /></span>
         <div>
-          <div class="title-md">Community Center</div>
+          <div class="title-md">社區活動中心</div>
           <div class="row" style="gap: 5px; color: var(--green-strong); font-size: 13px">
             <AppIcon name="check" :size="14" />
-            <span>Flood-Safe Shelter</span>
+            <span>可防洪的避難所</span>
           </div>
         </div>
       </div>
     </UiCard>
 
-    <p class="body center">You have arrived safely at a wheelchair-accessible shelter.</p>
+    <p class="body center">你已經平安抵達這處輪椅可進出的避難所。</p>
 
     <UiButton @click="shareStatus">
       <AppIcon :name="shared ? 'check' : 'share'" :size="18" />
-      {{ shared ? '已分享給照顧者' : 'Share Safety Status' }}
+      {{ shared ? '已分享給照顧者' : '告訴照顧者我到了' }}
     </UiButton>
     <UiButton variant="outline" to="/shelters">
       <AppIcon name="info" :size="18" />
-      Shelter Info
+      避難所資訊
     </UiButton>
     <UiButton variant="quiet" to="/map">
       <NavIcon name="map" />
-      Back to Map
+      回到地圖
     </UiButton>
   </section>
 </template>

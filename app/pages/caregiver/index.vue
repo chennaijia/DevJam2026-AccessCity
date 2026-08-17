@@ -21,19 +21,19 @@ function openMember(id: string) {
 
 <template>
   <section class="screen screen--nav">
-    <h1 class="head">Caregiver Dashboard</h1>
+    <h1 class="head">照顧者總覽</h1>
 
+    <!-- 代碼是被照顧者持有的，照顧者這裡只顯示連結狀態 -->
     <UiCard variant="active" padding="16px">
-      <div class="label">Family</div>
-      <div class="title-lg">{{ family?.name }}</div>
-      <div class="muted">Family Code</div>
-      <div class="row-between">
-        <span class="code">{{ family?.code }}</span>
-        <UiButton variant="outline" :block="false" to="/onboarding/family-code">Manage Code</UiButton>
+      <div class="label">已連結</div>
+      <div class="title-lg">{{ members?.length ?? 0 }} 位家人</div>
+      <div class="row-between" style="margin-top: 8px">
+        <span class="muted">{{ family?.name || '用家人給的代碼建立連結' }}</span>
+        <UiButton variant="outline" :block="false" to="/onboarding/connect">管理連結</UiButton>
       </div>
     </UiCard>
 
-    <div class="label">Connected Members ({{ members?.length ?? 0 }})</div>
+    <div class="label">已連結的家人（{{ members?.length ?? 0 }}）</div>
 
     <UiCard
       v-for="m in members"
@@ -57,12 +57,12 @@ function openMember(id: string) {
       </div>
 
       <div style="margin-top: 10px">
-        <div class="muted">Last location</div>
+        <div class="muted">最後位置</div>
         <div style="font-weight: 700">{{ m.lastLocation }}</div>
       </div>
 
       <div class="row-between" style="margin-top: 6px">
-        <span class="muted">Last activity</span>
+        <span class="muted">最後活動</span>
         <span class="row" style="gap: 6px">
           <b style="font-size: 14px">{{ m.lastActivity }}</b>
           <span class="chev" aria-hidden="true">›</span>
@@ -71,9 +71,8 @@ function openMember(id: string) {
     </UiCard>
 
     <UiButton variant="outline" to="/caregiver/alerts">提醒中心</UiButton>
-    <UiButton variant="outline" to="/settings/notifications">Notification Rules</UiButton>
-    <!-- TODO: 串接後端 —— POST /api/family/invites（寄出邀請） -->
-    <UiButton to="/onboarding/family-code">Invite Member</UiButton>
+    <UiButton variant="outline" to="/settings/notifications">通知規則</UiButton>
+    <UiButton to="/onboarding/connect">＋ 連結新的家人</UiButton>
 
     <BottomNav />
   </section>

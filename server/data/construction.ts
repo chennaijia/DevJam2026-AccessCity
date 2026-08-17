@@ -8,16 +8,16 @@ import type { ConstructionZone } from '#shared/types/accessity'
 export const constructionZones: ConstructionZone[] = [
   {
     id: 'c_main',
-    road: 'Main St',
-    section: 'Main St 與 4th Ave 路口',
+    road: '中山南路',
+    section: '中山南路與仁愛路口',
     until: '8/25',
     severity: 'blocked',
     note: '人行道封閉，輪椅無法通行',
   },
   {
     id: 'c_elm',
-    road: 'Elm St',
-    section: 'Elm St 靠近 Central Library',
+    road: '林蔭大道',
+    section: '林蔭大道靠近市立圖書館',
     until: '8/20',
     severity: 'narrowed',
     note: '施工圍籬佔用一半人行道',

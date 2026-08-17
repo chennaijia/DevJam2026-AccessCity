@@ -110,8 +110,8 @@ shared/
 | `/login`                    | 登入（Google 帳號；另有 Demo 帳號備援）           |
 | `/onboarding/role`          | 新手流程第一步：選身分（Profile → Change Role 也走這頁）|
 | `/onboarding/needs`         | 無障礙需求勾選                                   |
-| `/onboarding/connect`       | 被照顧者：連結照顧者（輸入 Family Code）、新手流程最後一步 |
-| `/onboarding/family-code`   | 照顧者：產生 / 分享 Family Code                  |
+| `/onboarding/connect`       | 照顧者：輸入家人給的代碼建立連結（可連結多位）    |
+| `/onboarding/family-code`   | 被照顧者：自己的連結代碼、已連結的照顧者          |
 | `/map`                      | 地圖首頁（搜尋、需求篩選、Mimo、Start Planning） |
 | `/map/plan`                 | AI Requirement Confirmation（需求 chips 確認）   |
 | `/map/routes`               | Suggested Routes（推薦 / 不推薦 / 替代路線）     |
@@ -134,7 +134,7 @@ Demo 動線：`/` → `/login`（登入是唯一入口）→ 第一次登入走�
 - 照顧者：`/home`（需要注意的提醒 → 關注對象切換 → 即時位置 → 統計）→ `Members` 分頁 `/caregiver` → 成員詳情 → `Alerts` 分頁 `/caregiver/alerts` → 提醒詳情回覆
 - 走註冊：`/login` → Sign Up → 需求勾選 → 連結照顧者 / 家庭代碼 → 主頁
 
-新手流程：`/onboarding/role`（選身分）→ 被照顧者 `needs` → `connect`；照顧者 `family-code`，
+新手流程：`/onboarding/role`（選身分）→ 被照顧者 `needs` → `family-code`（拿到自己的代碼）；照顧者 `connect`（輸入代碼），
 最後一步會呼叫 `POST /api/me/onboarding` 寫入 `onboardingCompletedAt`。
 沒走完之前，`session.global.ts` 會把人擋在 `/onboarding/**`，中途重新整理也接得回來。
 
@@ -208,8 +208,9 @@ async getRoutes(destination, needs) {
 | PATCH  | `/api/me`                         | 更新角色 / 無障礙需求 / 基本資料 |
 | GET    | `/api/family`                     | 家庭與成員                       |
 | POST   | `/api/family/code`                | 重新產生 Family Code             |
-| POST   | `/api/family/join`                | 用代碼加入家庭（同時建立成員資料）|
-| POST   | `/api/family/leave`               | 被照顧者離開家庭                 |
+| POST   | `/api/family/code`                | 被照顧者重新產生自己的代碼（舊碼失效）|
+| POST   | `/api/family/join`                | 照顧者用代碼建立連結（可連結多位）|
+| POST   | `/api/family/disconnect`          | 解除連結（照顧者傳 familyId／被照顧者傳 caregiverId）|
 | DELETE | `/api/family/members/:id`         | 照顧者把成員移出家庭             |
 | POST   | `/api/family/invites/:id/accept`  | 尚未開放（501），請用代碼加入     |
 | GET    | `/api/members`                    | 成員列表（照顧者用）             |

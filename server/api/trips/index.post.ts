@@ -13,13 +13,13 @@ export default defineEventHandler(async (event) => {
     status: 'on-trip' as const,
     destination: destination || '未指定目的地',
     eta: '',
-    currentLocation: 'Main St. near 4th Ave',
+    currentLocation: '尚未取得位置',
     startedAt: nowHHMM(),
     events: [
       {
         id: `e_${Date.now()}`,
         time: nowHHMM(),
-        title: 'Trip Started',
+        title: '行程開始',
         detail: `前往 ${destination}（route: ${routeId}）`,
         kind: 'start' as const,
       },

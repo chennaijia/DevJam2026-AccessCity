@@ -1,10 +1,11 @@
-import { alerts } from '../../utils/repo'
+import { alerts, familyIdsOf } from '../../utils/repo'
 import { requireAppUser } from '../../utils/session'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event)
-  if (!user.familyId) return []
+  const ids = familyIdsOf(user)
+  if (!ids.length) return []
 
-  const list = await alerts.list({ familyId: user.familyId })
-  return list.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+  const lists = await Promise.all(ids.map((familyId) => alerts.list({ familyId })))
+  return lists.flat().sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
 })

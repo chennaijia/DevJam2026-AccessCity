@@ -1,18 +1,23 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, origin, showConstructionIcons } =
-  usePlanning()
+const {
+  destination,
+  routes,
+  selectedRouteId,
+  selectedRoute,
+  todayNeeds,
+  origin,
+  showConstructionIcons,
+  runPlanning,
+} = usePlanning()
 const { user } = useSession()
 
 // 直接進到導航頁（例如重新整理）時，補抓一次路線
 if (!routes.value.length) {
-  // TODO: 串接後端 —— GET /api/routes?destination=&needs=
-  routes.value = await api.getRoutes(
-    destination.value || '台大醫院',
-    user.value?.needs ?? [],
-    todayNeeds.value,
-    origin.value,
-  )
-  selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
+  await runPlanning({
+    destination: destination.value || '台大醫院',
+    needs: user.value?.needs ?? [],
+    origin: origin.value,
+  })
 }
 
 const { speak, replay, stopSpeaking, canSpeak } = useSpeech()
@@ -114,9 +119,7 @@ async function endTrip() {
       </UiCard>
 
       <MimoBubble
-        :text="
-          conflicts.length ? '前面有施工，我已經幫你避開了。' : 'The path ahead is clear and safe.'
-        "
+        :text="conflicts.length ? '前面有施工，我已經幫你避開了。' : '前面的路很順，放心走。'"
       />
 
       <!-- 語音優先：大按鈕的重聽與求助 -->
@@ -134,14 +137,14 @@ async function endTrip() {
       <div class="row" style="margin-top: 12px">
         <UiButton variant="ghost" pill @click="navigateTo('/report')">
           <AppIcon name="warn" :size="17" />
-          Report Issue
+          回報路況
         </UiButton>
         <UiButton variant="ghost" pill :block="false" aria-label="語音開關" @click="muted = !muted">
           <AppIcon :name="muted ? 'mute' : 'sound'" :size="18" />
         </UiButton>
         <UiButton variant="danger" pill @click="endTrip">
           <AppIcon name="close" :size="17" />
-          End Trip
+          結束導航
         </UiButton>
       </div>
     </div>

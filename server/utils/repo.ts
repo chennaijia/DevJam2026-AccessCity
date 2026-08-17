@@ -35,7 +35,10 @@ import { collection } from './collections'
 export const DEMO_FAMILY_ID = 'f_chuang'
 
 export interface UserDoc extends User {
+  /** 被照顧者：自己的照護圈；照顧者：主要（第一個）連結的照護圈 */
   familyId: string | null
+  /** 照顧者可以同時連結多位家人，所以另外存一份清單 */
+  familyIds?: string[]
   todayNeeds: string[]
   /** 使用者自己改過名字；之後 Google 登入不要再覆蓋 */
   nameCustomized?: boolean
@@ -152,6 +155,47 @@ export async function ensureFamilySeed() {
       await users.update(id, { onboardingCompletedAt: new Date().toISOString() })
     }
   }
+
+  await migrateToRecipientOwnedCodes()
+}
+
+/**
+ * 舊模型是「照顧者持有家庭代碼」，現在改成「被照顧者持有自己的照護圈」。
+ * 這段把 demo 資料搬過來：Kai 擁有原本的照護圈，阿嬤獨立成一個，
+ * 照顧者則同時連結兩位——順便示範一位照顧者可以照顧多人。
+ */
+async function migrateToRecipientOwnedCodes() {
+  const demoFamily = await families.get(DEMO_FAMILY_ID)
+  if (!demoFamily) return
+
+  // 1. 原本的照護圈改由 Kai 持有
+  if (demoFamily.ownerId !== 'u_kai') {
+    await families.update(DEMO_FAMILY_ID, { ownerId: 'u_kai' })
+  }
+
+  // 2. 阿嬤搬到自己的照護圈
+  const ama = await members.get('m_ama')
+  const AMA_FAMILY_ID = 'f_ama'
+  if (ama && ama.familyId === DEMO_FAMILY_ID) {
+    await families.set({
+      id: AMA_FAMILY_ID,
+      name: '阿嬤的照護圈',
+      code: generateFamilyCode(),
+      codeExpiresInDays: 7,
+      codeCreatedAt: new Date().toISOString(),
+      ownerId: 'u_ama',
+    })
+    await members.update('m_ama', { familyId: AMA_FAMILY_ID })
+  }
+
+  // 3. 照顧者同時連結兩位家人
+  const caregiver = await users.get('u_naijia')
+  if (caregiver && !(caregiver.familyIds ?? []).includes(AMA_FAMILY_ID)) {
+    await users.update('u_naijia', {
+      familyId: DEMO_FAMILY_ID,
+      familyIds: [DEMO_FAMILY_ID, AMA_FAMILY_ID],
+    })
+  }
 }
 
 /**
@@ -208,11 +252,23 @@ export function isCodeExpired(family: FamilyDoc) {
   return Date.now() > expiresAt
 }
 
-/** 照顧者第一次進到家庭頁時，幫他建立自己的家庭 */
+/** 使用者能看到的所有照護圈（照顧者可能同時連結多位家人） */
+export function familyIdsOf(user: UserDoc): string[] {
+  if (user.role === 'caregiver') {
+    const list = user.familyIds ?? (user.familyId ? [user.familyId] : [])
+    return [...new Set(list)]
+  }
+  return user.familyId ? [user.familyId] : []
+}
+
+/**
+ * 被照顧者第一次進到「我的連結代碼」時，幫他建立自己的照護圈。
+ * 代碼由被照顧者持有：要不要讓人看到自己的位置，決定權在他身上。
+ */
 export async function createFamilyFor(user: UserDoc): Promise<FamilyDoc> {
   const family: FamilyDoc = {
     id: `f_${user.id}_${Date.now()}`,
-    name: `${user.name} 的家庭`,
+    name: `${user.name} 的照護圈`,
     code: generateFamilyCode(),
     codeExpiresInDays: 7,
     codeCreatedAt: new Date().toISOString(),
@@ -221,6 +277,9 @@ export async function createFamilyFor(user: UserDoc): Promise<FamilyDoc> {
 
   await families.set(family)
   await users.update(user.id, { familyId: family.id, familyCode: family.code })
+
+  // 建立的同時就把自己登記成成員，照顧者連結後立刻看得到
+  await addMemberFor({ ...user, familyId: family.id }, family.id)
   return family
 }
 
@@ -238,15 +297,15 @@ export async function addMemberFor(user: UserDoc, familyId: string): Promise<Mem
     ? `${user.needs
         .map((n) =>
           n === 'wheelchair'
-            ? 'Wheelchair'
+            ? '使用輪椅'
             : n === 'visual'
-              ? 'Visual impairment'
+              ? '視覺障礙'
               : n === 'mobility'
-                ? 'Mobility assistance'
-                : 'Other',
+                ? '行動不便'
+                : '其他需求',
         )
-        .join(' · ')} · receiving care`
-    : 'receiving care'
+        .join(' · ')} · 被照顧者`
+    : '被照顧者'
 
   const member: MemberDoc = {
     id: `m_${user.id}`,
@@ -257,7 +316,7 @@ export async function addMemberFor(user: UserDoc, familyId: string): Promise<Mem
     role: 'care-recipient',
     needsLabel,
     status: 'safe',
-    statusLabel: 'Safe',
+    statusLabel: '安全',
     lastLocation: '尚未取得位置',
     lastActivity: '剛加入',
     lastActivityAt: '剛剛',

@@ -76,13 +76,13 @@ function call() {
       </div>
     </MapCanvas>
 
-    <InfoCard label="Current location" :value="member?.lastLocation ?? '—'" />
-    <InfoCard label="Last movement" :value="member?.lastActivityAt ?? '—'" />
-    <InfoCard label="Battery" :value="`${member?.batteryPercent ?? 0}%`" />
+    <InfoCard label="目前位置" :value="member?.lastLocation ?? '—'" />
+    <InfoCard label="最後移動" :value="member?.lastActivityAt ?? '—'" />
+    <InfoCard label="手機電量" :value="`${member?.batteryPercent ?? 0}%`" />
 
     <UiCard variant="soft" padding="14px 16px">
       <div class="row" style="gap: 8px; color: var(--teal)">
-        <AppIcon name="history" :size="18" /><span class="title-md">Trip Timeline</span>
+        <AppIcon name="history" :size="18" /><span class="title-md">行程時間軸</span>
       </div>
       <ul v-if="trip?.events?.length" class="timeline">
         <li v-for="e in trip.events" :key="e.id">
@@ -114,7 +114,7 @@ function call() {
     </UiCard>
 
     <div class="row-between">
-      <span class="label">Notify me if {{ member?.name }} stays in the same area for</span>
+      <span class="label">{{ member?.name }} 在同一個地方停留多久要通知我</span>
       <span v-if="saved" class="saved">已儲存</span>
     </div>
     <div class="row" style="flex-wrap: wrap">
@@ -125,19 +125,19 @@ function call() {
         :selected="stayMinutes === opt"
         @click="stayMinutes = opt"
       >
-        {{ opt }} min
+        {{ opt }} 分鐘
       </UiChip>
-      <UiChip as="button">Custom</UiChip>
+      <UiChip as="button">自訂</UiChip>
     </div>
 
-    <div class="label">Notifications for this member</div>
-    <ToggleRow v-model="notifications.safetyCheck" title="Safety check alerts" />
-    <ToggleRow v-model="notifications.location" title="Location notifications" />
-    <ToggleRow v-model="notifications.emergency" title="Emergency alerts" />
+    <div class="label">這位家人的通知</div>
+    <ToggleRow v-model="notifications.safetyCheck" title="安全確認提醒" />
+    <ToggleRow v-model="notifications.location" title="位置通知" />
+    <ToggleRow v-model="notifications.emergency" title="緊急求助提醒" />
 
     <div class="row">
-      <UiButton @click="call">Call</UiButton>
-      <UiButton variant="outline">Message</UiButton>
+      <UiButton @click="call">撥打電話</UiButton>
+      <UiButton variant="outline">傳訊息</UiButton>
     </div>
 
     <UiButton variant="quiet" :disabled="removing" @click="removeMember">

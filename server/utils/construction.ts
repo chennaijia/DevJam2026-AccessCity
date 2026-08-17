@@ -5,6 +5,7 @@
  * 只有使用者需求包含「避開施工」時才會用到。
  */
 import proj4 from 'proj4'
+import { planLog } from './planLog'
 import type { ConstructionZone } from '#shared/types/accessity'
 import { haversineMeters, decodePolyline, samplePolyline } from './geo'
 
@@ -71,7 +72,7 @@ async function getConstructionSites(): Promise<ConstructionSite[]> {
   if (inFlight) return inFlight
 
   inFlight = (async () => {
-    console.log('[construction] 呼叫台北市今日施工資訊 API…')
+    planLog('construction', '呼叫台北市今日施工資訊 API…')
     // 這份資料開頭有 BOM，且要保留原始文字自己 parse，用 $fetch 內建的 JSON parse 會直接炸掉
     const raw = await $fetch<string>(SOURCE_URL, { responseType: 'text' })
     const json = JSON.parse(raw.replace(/^﻿/, '')) as { features: RawFeature[] }
@@ -101,7 +102,7 @@ async function getConstructionSites(): Promise<ConstructionSite[]> {
 
     cache = sites
     cachedAt = Date.now()
-    console.log(`[construction] 抓到 ${sites.length} 筆施工案`)
+    planLog('construction', `抓到 ${sites.length} 筆施工案`)
     return sites
   })()
 
@@ -155,10 +156,11 @@ export async function checkRouteConstructionConflicts(encodedPolyline?: string):
   }))
 
   const blockedCount = result.filter((c) => c.severity === 'blocked').length
-  console.log(
+  planLog(
+    'construction',
     result.length
-      ? `[construction] 路線比對結果：撞到 ${result.length} 個施工案（完全封閉 ${blockedCount} 個）`
-      : '[construction] 路線比對結果：沿途沒有撞到任何施工案',
+      ? `路線比對結果：撞到 ${result.length} 個施工案（完全封閉 ${blockedCount} 個）`
+      : '路線比對結果：沿途沒有撞到任何施工案',
   )
 
   return result

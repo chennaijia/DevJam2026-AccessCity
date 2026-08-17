@@ -109,24 +109,24 @@ defineExpose({ openSos, askCheckin })
     <ModalDialog
       v-model:open="sosOpen"
       tone="red"
-      title="Do you need emergency assistance?"
-      message="Your caregiver will be notified immediately with your location and the current time."
+      title="需要緊急協助嗎？"
+      message="我會立刻把你的位置和時間傳給照顧者。"
     >
-      <UiButton variant="danger" @click="sendSos">Send Emergency Alert</UiButton>
-      <UiButton variant="quiet" @click="sosOpen = false">Cancel</UiButton>
+      <UiButton variant="danger" @click="sendSos">送出緊急求助</UiButton>
+      <UiButton variant="quiet" @click="sosOpen = false">取消</UiButton>
     </ModalDialog>
 
     <ModalDialog
       v-model:open="checkinOpen"
       tone="yellow"
-      title="Are you okay?"
-      message="We noticed that you have stayed in the same location for more than 15 minutes. Do you need help?"
+      title="你還好嗎？"
+      message="你在同一個地方停留超過 15 分鐘了，需要幫忙嗎？"
     >
       <p class="countdown">
         {{ remaining }} 秒內沒有回覆的話，我會幫你通知照顧者
       </p>
-      <UiButton variant="green" @click="answerCheckin('ok')">I'm OK</UiButton>
-      <UiButton variant="danger" @click="answerCheckin('need-help')">I Need Help</UiButton>
+      <UiButton variant="green" @click="answerCheckin('ok')">我沒事</UiButton>
+      <UiButton variant="danger" @click="answerCheckin('need-help')">我需要幫忙</UiButton>
     </ModalDialog>
 
     <div v-if="toast" class="toast">{{ toast }}</div>

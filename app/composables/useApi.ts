@@ -21,6 +21,7 @@ import type {
   RequirementChip,
   Role,
   RouteOption,
+  RoutesResponse,
   SavedPlace,
   Shelter,
   TodayNeedOption,
@@ -88,18 +89,18 @@ export const api = {
     return request<Family>('/family/code', { method: 'POST' })
   },
 
-  /** 用家庭代碼加入；失敗時 reason 會說明原因 */
+  /** 照顧者用被照顧者給的代碼建立連結；失敗時 reason 會說明原因 */
   async joinFamily(code: string): Promise<{
     ok: boolean
-    reason: 'empty' | 'not-found' | 'expired' | null
+    reason: 'empty' | 'not-found' | 'expired' | 'already' | null
     family: Family | null
   }> {
     return request('/family/join', { method: 'POST', body: { code } })
   },
 
-  /** 被照顧者離開家庭 */
-  async leaveFamily(): Promise<ApiOk> {
-    return request('/family/leave', { method: 'POST' })
+  /** 照顧者解除與某位家人的連結（被照顧者端不開放，見 server/api/family/disconnect） */
+  async disconnectFamily(payload: { familyId?: string } = {}): Promise<ApiOk> {
+    return request('/family/disconnect', { method: 'POST', body: payload })
   },
 
   /** 照顧者把成員移出家庭 */
@@ -137,8 +138,8 @@ export const api = {
     needs: AccessNeed[] = [],
     todayNeeds: string[] = [],
     origin?: { lat: number; lng: number } | null,
-  ): Promise<RouteOption[]> {
-    return request<RouteOption[]>('/routes', {
+  ): Promise<RoutesResponse> {
+    return request<RoutesResponse>('/routes', {
       query: {
         destination,
         needs: needs.join(','),
@@ -163,20 +164,20 @@ export const api = {
     return request<SavedPlace[]>('/places')
   },
 
-  async addSavedPlace(payload: { label: string; address: string; icon?: SavedPlace['icon'] }): Promise<SavedPlace> {
-    if (!USE_MOCK) return request<SavedPlace>('/places', { method: 'POST', body: payload })
-    return mock({ id: `p_${Date.now()}`, icon: 'pin', ...payload })
+  async addSavedPlace(payload: {
+    label: string
+    address: string
+    icon?: SavedPlace['icon']
+  }): Promise<SavedPlace> {
+    return request<SavedPlace>('/places', { method: 'POST', body: payload })
   },
 
   async updateSavedPlace(id: string, patch: Partial<SavedPlace>): Promise<SavedPlace> {
-    if (!USE_MOCK) return request<SavedPlace>(`/places/${id}`, { method: 'PATCH', body: patch })
-    const target = mockSavedPlaces.find((p) => p.id === id)!
-    return mock({ ...target, ...patch })
+    return request<SavedPlace>(`/places/${id}`, { method: 'PATCH', body: patch })
   },
 
   async deleteSavedPlace(id: string): Promise<ApiOk> {
-    if (!USE_MOCK) return request(`/places/${id}`, { method: 'DELETE' })
-    return mock({ ok: true } as ApiOk)
+    return request(`/places/${id}`, { method: 'DELETE' })
   },
 
   async getTodayNeedOptions(): Promise<TodayNeedOption[]> {

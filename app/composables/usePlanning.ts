@@ -2,7 +2,7 @@
  * 一趟行程的規劃狀態：目的地 → AI 解析出的需求 chips → 選定路線 → 導航中。
  * todayNeeds 是「今天才有效」的暫時需求（企劃書 §4.2），會一起送進路線規劃。
  */
-import type { RequirementChip, RouteOption } from '#shared/types/accessity'
+import type { PlanTraceStep, RequirementChip, RouteOption } from '#shared/types/accessity'
 
 export function usePlanning() {
   const destination = useState<string>('accessity:destination', () => '')
@@ -19,6 +19,9 @@ export function usePlanning() {
    * 放在共用狀態，路線頁關掉之後導航頁也維持關閉。
    */
   const showConstructionIcons = useState<boolean>('accessity:show-construction-icons', () => true)
+  /** 後端回報的規劃過程（每一步做了什麼、花多久），用來在畫面上呈現系統怎麼算的 */
+  const planTrace = useState<PlanTraceStep[]>('accessity:plan-trace', () => [])
+  const planning = useState<boolean>('accessity:planning', () => false)
 
   const selectedRoute = computed(
     () => routes.value.find((r) => r.id === selectedRouteId.value) ?? routes.value[1] ?? routes.value[0],
@@ -42,6 +45,34 @@ export function usePlanning() {
   function planTo(place: string) {
     destination.value = place
     return navigateTo({ path: '/map/plan', query: place ? { to: place } : undefined })
+  }
+
+  /**
+   * 規劃路線：把結果與執行軌跡一起存起來。
+   * 各頁面都用這支，畫面才會有一致的 loading 與過程呈現。
+   */
+  async function runPlanning(options: {
+    destination: string
+    needs?: string[]
+    origin?: { lat: number; lng: number } | null
+  }) {
+    planning.value = true
+    planTrace.value = []
+    try {
+      const result = await api.getRoutes(
+        options.destination,
+        (options.needs ?? []) as never,
+        todayNeeds.value,
+        options.origin ?? null,
+      )
+      routes.value = result.routes
+      planTrace.value = result.trace
+      selectedRouteId.value =
+        result.routes.find((r) => r.badge === 'recommended')?.id ?? result.routes[0]?.id ?? ''
+      return result
+    } finally {
+      planning.value = false
+    }
   }
 
   function reset() {
@@ -75,6 +106,9 @@ export function usePlanning() {
     origin,
     ignoreProfileNeeds,
     showConstructionIcons,
+    planTrace,
+    planning,
+    runPlanning,
     resolveOrigin,
     toggleTodayNeed,
     planTo,

@@ -1,6 +1,6 @@
 import type { Member } from '#shared/types/accessity'
 import { members } from '../../utils/repo'
-import { requireFamilyId } from '../../utils/session'
+import { canAccessFamily } from '../../utils/session'
 
 export default defineEventHandler(async (event) => {
   const familyId = await requireFamilyId(event)

@@ -9,17 +9,18 @@ const {
   ignoreProfileNeeds,
   origin,
   showConstructionIcons,
+  runPlanning,
+  planTrace,
 } = usePlanning()
 const { user } = useSession()
 
+// 直接開這頁（例如重新整理）時補算一次
 if (!routes.value.length) {
-  // TODO: 串接後端 —— GET /api/routes?destination=&needs=
-  routes.value = await api.getRoutes(
-    destination.value || '台大醫院',
-    ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
-    [...todayNeeds.value, ...chipNeeds.value],
-    origin.value,
-  )
+  await runPlanning({
+    destination: destination.value || '台大醫院',
+    needs: ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
+    origin: origin.value,
+  })
 }
 selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
 
@@ -30,6 +31,11 @@ const baselineRoute = computed(
 const showComparison = computed(
   () => !!baselineRoute.value && baselineRoute.value.id !== selectedRoute.value?.id,
 )
+/** 選的路線比原始路線多花幾分鐘；沒有比較對象或沒比較慢就不顯示那張便條 */
+const extraMinutes = computed(() => {
+  if (!showComparison.value || !selectedRoute.value || !baselineRoute.value) return 0
+  return Math.max(0, selectedRoute.value.durationMinutes - baselineRoute.value.durationMinutes)
+})
 
 // 勾 Safety 才在地圖上標施工地點；勾 Wheelchair 才標無障礙通行點——沒勾就不顯示，維持原本畫面乾淨
 const showSafetyMarkers = computed(
@@ -79,7 +85,7 @@ async function go() {
       :facility-markers="facilityMarkers"
     >
       <div class="map__chips">
-        <UiChip tone="plain"><AppIcon name="pin" :size="15" /> Current Location</UiChip>
+        <UiChip tone="plain"><AppIcon name="pin" :size="15" /> 目前位置</UiChip>
         <div class="row" style="gap: 8px">
           <!-- 施工圖標開關：只是把地圖上的吉祥物收起來，路線本身仍然有避開施工 -->
           <!-- <UiChip
@@ -111,8 +117,10 @@ async function go() {
 
     <BottomSheet :snap-points="[0.42, 0.9]">
       <template #header>
-        <h2 class="title-md">Suggested Routes</h2>
+        <h2 class="title-md">建議路線</h2>
       </template>
+
+      <PlanTraceCard :trace="planTrace" style="margin-bottom: 12px" />
 
       <div class="stack">
         <UiCard
@@ -131,7 +139,7 @@ async function go() {
             >
               {{ r.badgeLabel }}
             </UiChip>
-            <span class="title-md">{{ r.durationMinutes }} min</span>
+            <span class="title-md">{{ r.durationMinutes }} 分鐘</span>
           </div>
 
           <div
@@ -163,12 +171,12 @@ async function go() {
           <div v-if="r.reason" class="reason">
             <p>{{ r.reason }}</p>
             <div class="row" style="gap: 28px; margin-top: 8px">
-              <div>
-                <div class="muted">Accessibility</div>
+              <div v-if="r.accessibilityScore != null">
+                <div class="muted">無障礙程度</div>
                 <div class="score">{{ r.accessibilityScore }}%</div>
               </div>
-              <div>
-                <div class="muted">Safety</div>
+              <div v-if="r.safetyScore != null">
+                <div class="muted">安全程度</div>
                 <div class="score">{{ r.safetyScore }}%</div>
               </div>
             </div>
@@ -176,12 +184,12 @@ async function go() {
         </UiCard>
       </div>
 
-      <div class="note">It's 4 mins longer, but you can definitely reach this one!</div>
+      <div v-if="extraMinutes" class="note">多花 {{ extraMinutes }} 分鐘，但這條你一定到得了！</div>
 
       <template #footer>
         <UiButton @click="go">
           <AppIcon name="walk" :size="18" />
-          Go with Safety
+          就走這條
         </UiButton>
       </template>
     </BottomSheet>

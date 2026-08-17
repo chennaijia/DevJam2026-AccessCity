@@ -63,8 +63,8 @@ async function loginAsDemo() {
 <template>
   <section class="screen login">
     <div class="login__brand center">
-      <h1 class="brand" style="font-size: 34px">Accessity</h1>
-      <p class="body">Reachable routes for everyone.</p>
+      <AppLogo :size="76" layout="stack" :text-size="34" />
+      <p class="body">每個人都到得了的路。</p>
     </div>
 
     <p v-if="error" class="center" style="color: var(--red); font-weight: 600">{{ error }}</p>
@@ -108,7 +108,7 @@ async function loginAsDemo() {
       </div>
     </UiCard>
 
-    <div class="divider-or">or</div>
+    <div class="divider-or">或</div>
 
     <UiButton variant="ghost" :disabled="loading" @click="loginAsDemo">先用 Demo 帳號看看</UiButton>
   </section>

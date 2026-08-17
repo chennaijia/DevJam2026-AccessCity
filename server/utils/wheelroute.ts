@@ -4,6 +4,7 @@
  * 只涵蓋台北市 —— 範圍外一律視為「無資料」，不當作「沒有」。
  */
 import { haversineMeters, decodePolyline, samplePolyline } from './geo'
+import { collectPlanLine, planLog } from './planLog'
 
 const BASE_URL = 'https://wheelroute.gov.taipei/wheelrouteApi/api/facility/Get'
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
@@ -37,8 +38,12 @@ function renderProgress(kind: number, recordCount: number) {
   const filled = Math.round((fetchedCount / ALL_KINDS.length) * barLength)
   const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled)
   const label = KIND_LABELS[kind] ?? `kind=${kind}`
-  const line = `[wheelroute] 資料抓取中 [${bar}] ${fetchedCount}/${ALL_KINDS.length}｜${label} ${recordCount} 筆`
-  process.stdout.write(`\r${line.padEnd(70)}`)
+  const line = `資料抓取中 [${bar}] ${fetchedCount}/${ALL_KINDS.length}｜${label} ${recordCount} 筆`
+
+  // 終端機用單行覆寫避免洗版，畫面上則每一筆都留著讓使用者看得到進度
+  process.stdout.write(`\r${`[wheelroute] ${line}`.padEnd(70)}`)
+  collectPlanLine(line)
+
   if (fetchedCount >= ALL_KINDS.length) {
     process.stdout.write('\n')
     fetchedCount = 0
@@ -129,8 +134,9 @@ export async function checkRouteAccessibilityCoverage(
   }
 
   const coverage = (inTaipei.length - missingCount) / inTaipei.length
-  console.log(
-    `[wheelroute] 路線比對結果：取樣 ${inTaipei.length} 點，缺無障礙通行點 ${missingCount} 點，覆蓋率 ${Math.round(coverage * 100)}%`,
+  planLog(
+    'wheelroute',
+    `路線比對結果：取樣 ${inTaipei.length} 點，缺無障礙通行點 ${missingCount} 點，覆蓋率 ${Math.round(coverage * 100)}%`,
   )
 
   return { checked: true, coverage, sampleCount: inTaipei.length, missingCount }

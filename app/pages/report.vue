@@ -21,7 +21,7 @@ async function submit() {
 
 <template>
   <section class="screen screen--nav">
-    <ScreenHeader title="Report" back />
+    <ScreenHeader title="回報路況" back />
 
     <div>
       <h2 class="title-xl">回報路況</h2>

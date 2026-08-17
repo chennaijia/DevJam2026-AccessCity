@@ -32,6 +32,10 @@ export interface Family {
   code: string
   codeExpiresInDays: number
   members: Member[]
+  /** 被照顧者視角：已連結的照顧者 */
+  caregivers?: { id: string; name: string; avatar?: string }[]
+  /** 照顧者視角：已連結的多個照護圈 */
+  families?: (Omit<Family, 'families' | 'caregivers'> & { members: Member[] })[]
 }
 
 export interface Member {
@@ -65,6 +69,30 @@ export interface RouteStep {
   instruction: string
   distanceMeters: number
   tag?: string
+}
+
+/**
+ * 路線規劃的執行軌跡：每個步驟做了什麼、花多久、結果是什麼。
+ * 用來在畫面上呈現「系統怎麼算出這條路線」，而不是只給一個結果。
+ */
+export interface PlanTraceStep {
+  key: string
+  /** 這一步在做什麼 */
+  label: string
+  /** 資料來源（Google Routes API、臺北市政府開放資料…） */
+  source?: string
+  /** 實際結果，例如「回傳 2 條候選路線」 */
+  detail?: string
+  /** 耗時（毫秒） */
+  ms: number
+  /** 這一步實際印出的訊息（呼叫了哪支 API、抓到幾筆、比對結果…） */
+  logs?: string[]
+  status: 'done' | 'skipped'
+}
+
+export interface RoutesResponse {
+  routes: RouteOption[]
+  trace: PlanTraceStep[]
 }
 
 /** 施工／封路資訊（城市開放資料的簡化版） */

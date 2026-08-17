@@ -21,9 +21,9 @@ export default defineEventHandler(async (event) => {
   })
 
   const titleByAnswer = {
-    ok: 'Check-in: I am OK',
-    'need-help': 'Check-in: Needs help',
-    'no-response': 'Check-in: No response',
+    ok: '安全確認：回覆沒事',
+    'need-help': '安全確認：需要協助',
+    'no-response': '安全確認：未回覆',
   } as const
 
   // 寫進行程時間軸，照顧者端看得到
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
         {
           id: `e_${Date.now()}`,
           time: nowHHMM(),
-          title: titleByAnswer[answer] ?? 'Check-in',
+          title: titleByAnswer[answer] ?? '安全確認',
           detail:
             answer === 'ok'
               ? '使用者回覆沒事'
@@ -57,20 +57,20 @@ export default defineEventHandler(async (event) => {
       kind: 'safety-check',
       memberId: user.id,
       memberName: user.name,
-      title: 'Safety Alert',
+      title: '安全確認提醒',
       message: escalated
-        ? `${user.name} has not responded to the safety check.`
-        : `${user.name} asked for help during a safety check.`,
-      sourceLabel: escalated ? 'Automatic Safety Alert' : 'Self Check-in',
-      location: trip?.currentLocation ?? 'Main St. near 4th Ave',
-      time: `${nowHHMM()} · just now`,
-      lastMovement: 'just now',
+        ? `${user.name} 沒有回覆安全確認。`
+        : `${user.name} 在安全確認中要求協助。`,
+      sourceLabel: escalated ? '系統自動偵測' : '本人主動回報',
+      location: trip?.currentLocation ?? '尚未取得位置',
+      time: `${nowHHMM()} · 剛剛`,
+      lastMovement: '剛剛',
       acknowledged: false,
       createdAt: new Date().toISOString(),
     })
     // 推播給家庭裡的照顧者
     await notifyCaregivers(familyId, {
-      title: 'Safety Alert',
+      title: '安全確認提醒',
       body: escalated
         ? `${user.name} 沒有回覆安全檢查`
         : `${user.name} 在安全檢查中要求協助`,

@@ -1,18 +1,25 @@
 <script setup lang="ts">
-/** 被照顧者：用照顧者給的家庭代碼連結彼此 */
-const { user, setUser, needsOnboarding, completeOnboarding } = useSession()
+/**
+ * 照顧者：輸入家人給的連結代碼。
+ * 代碼由被照顧者持有，所以這頁是「請對方給你代碼」，不是自己產生。
+ */
+const { setUser, needsOnboarding, completeOnboarding } = useSession()
 
 const code = ref('')
 const joining = ref(false)
 const error = ref('')
-const joinedFamily = ref<string | null>(null)
 
-const connected = computed(() => !!joinedFamily.value || !!user.value?.familyId)
+// 已經連結的家人（照顧者可以同時連結多位）
+const { data: family, refresh } = await useAsyncData('caregiver-connections', () =>
+  api.getFamily().catch(() => null),
+)
+
+const connections = computed(() => family.value?.families ?? [])
 
 const REASONS: Record<string, string> = {
   empty: '請先輸入代碼',
-  'not-found': '找不到這個代碼，請跟照顧者確認',
-  expired: '這個代碼已經過期了，請照顧者重新產生',
+  'not-found': '找不到這組代碼，請跟家人確認',
+  expired: '這組代碼已經過期了，請家人重新產生',
 }
 
 async function connect() {
@@ -24,8 +31,8 @@ async function connect() {
       error.value = REASONS[res.reason ?? 'not-found'] ?? '代碼不正確'
       return
     }
-    joinedFamily.value = res.family?.name ?? '家庭'
-    // 重新拿一次自己的資料，Profile 與導覽列才會同步
+    code.value = ''
+    await refresh()
     setUser(await api.getMe())
   } catch {
     error.value = '連線失敗，請再試一次'
@@ -34,35 +41,32 @@ async function connect() {
   }
 }
 
-/** 新手流程的最後一步：不管有沒有連結照顧者，都算走完 */
+async function disconnect(familyId: string) {
+  if (!confirm('解除後就看不到這位家人的狀況了，確定嗎？')) return
+  await api.disconnectFamily({ familyId })
+  await refresh()
+  setUser(await api.getMe())
+}
+
 async function finish() {
   if (needsOnboarding.value) await completeOnboarding()
   await navigateTo('/home')
-}
-
-async function leave() {
-  await api.leaveFamily()
-  joinedFamily.value = null
-  setUser(await api.getMe())
 }
 </script>
 
 <template>
   <section class="screen">
-    <ScreenHeader title="Accessity" back="/onboarding/needs" />
+    <ScreenHeader title="Accessity" :back="needsOnboarding ? '/onboarding/role' : '/caregiver'" />
 
     <div>
-      <h2 class="title-xl">Connect with a caregiver</h2>
+      <h2 class="title-xl">連結你要照顧的家人</h2>
       <p class="body">
-        Optional. A caregiver can see your location during trips and get alerts if something looks
-        wrong.
+        請家人打開 Accessity 的「你的連結代碼」，把 AC- 開頭的代碼給你，輸入後就能看到他的狀況。
       </p>
     </div>
 
-    <!-- 還沒連結：輸入代碼 -->
-    <UiCard v-if="!connected" padding="16px">
-      <div class="title-md">Enter Family Code</div>
-      <p class="muted">跟你的照顧者拿 AC- 開頭的代碼</p>
+    <UiCard padding="16px">
+      <div class="title-md">輸入連結代碼</div>
       <input
         v-model="code"
         class="input"
@@ -71,40 +75,32 @@ async function leave() {
         @keyup.enter="connect"
       />
       <UiButton :disabled="joining" @click="connect">
-        {{ joining ? '連結中…' : 'Connect' }}
+        {{ joining ? '連結中…' : '連結家人' }}
       </UiButton>
       <p v-if="error" class="muted" style="color: var(--red); margin-top: 8px">{{ error }}</p>
     </UiCard>
 
-    <!-- 已連結 -->
-    <UiCard v-else variant="active" padding="16px">
-      <div class="row" style="gap: 10px">
-        <span class="avatar"><AppIcon name="check" :size="20" /></span>
-        <div class="grow">
-          <div class="muted">已連結家庭</div>
-          <div class="title-md">{{ joinedFamily ?? user?.familyCode }}</div>
-        </div>
+    <div class="label">已連結的家人</div>
+
+    <UiCard v-if="!connections.length" variant="soft" padding="16px">
+      <div class="center stack-sm">
+        <div class="title-md">還沒有連結任何人</div>
+        <div class="muted">連結之後，這裡會顯示他們的即時狀況</div>
       </div>
-      <p class="muted" style="margin-top: 10px">
-        行程中的位置會分享給這個家庭的照顧者，遇到狀況時他們會收到通知。
-      </p>
-      <UiButton variant="ghost" style="margin-top: 10px" @click="leave">離開家庭</UiButton>
     </UiCard>
 
-    <UiButton @click="finish">{{ connected ? '完成，開始使用' : 'Continue to Map' }}</UiButton>
-    <UiButton v-if="!connected" variant="quiet" @click="finish">Skip for now</UiButton>
+    <UiCard v-for="f in connections" :key="f.id" padding="14px 16px">
+      <div class="row-between">
+        <div>
+          <div class="title-md">{{ f.name }}</div>
+          <div class="muted">{{ f.members.map((m) => m.name).join('、') || '尚無成員' }}</div>
+        </div>
+        <UiChip as="button" tone="red" @click="disconnect(f.id)">解除</UiChip>
+      </div>
+    </UiCard>
+
+    <UiButton @click="finish">
+      {{ connections.length ? '完成，開始使用' : '先跳過' }}
+    </UiButton>
   </section>
 </template>
-
-<style scoped>
-.avatar {
-  flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--green-soft);
-  color: var(--green-strong);
-  display: grid;
-  place-items: center;
-}
-</style>

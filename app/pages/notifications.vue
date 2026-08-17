@@ -25,7 +25,7 @@ async function open(id: string, to?: string) {
 
 <template>
   <section class="screen screen--nav">
-    <ScreenHeader title="Notifications" back="/home" />
+    <ScreenHeader title="通知" back="/home" />
 
     <div class="row-between">
       <div>

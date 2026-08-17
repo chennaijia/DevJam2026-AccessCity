@@ -1,14 +1,13 @@
 import { alerts } from '../../../utils/repo'
 import { notifyUser } from '../../../utils/push'
-import { requireAppUser, requireFamilyId } from '../../../utils/session'
+import { canAccessFamily, requireAppUser } from '../../../utils/session'
 
 export default defineEventHandler(async (event) => {
-  const familyId = await requireFamilyId(event)
   const id = getRouterParam(event, 'id')!
   const { action } = await readBody<{ action: 'responding' | 'received' }>(event)
 
   const alert = await alerts.get(id)
-  if (!alert || alert.familyId !== familyId) {
+  if (!alert || !(await canAccessFamily(event, alert.familyId))) {
     throw createError({ statusCode: 404, statusMessage: '找不到這則提醒' })
   }
 

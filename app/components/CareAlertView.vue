@@ -35,28 +35,28 @@ async function respond(action: 'responding' | 'received') {
       <UiCard padding="0" style="overflow: hidden">
         <MapCanvas height="180px" show-flood :markers="[{ x: 52, y: 46, label: '', tone: 'red' }]">
           <div class="live">
-            <UiChip tone="plain">{{ alert.location.split(' near')[0] }} · Live</UiChip>
+            <UiChip tone="plain">{{ alert.location.split(' near')[0] }} · 即時</UiChip>
           </div>
         </MapCanvas>
       </UiCard>
 
-      <InfoCard label="Current Location" :value="alert.location" />
-      <InfoCard label="Time" :value="alert.time" />
-      <InfoCard label="Last Movement" :value="alert.lastMovement" />
+      <InfoCard label="目前位置" :value="alert.location" />
+      <InfoCard label="發生時間" :value="alert.time" />
+      <InfoCard label="最後移動" :value="alert.lastMovement" />
 
       <div class="row">
-        <UiButton>Call</UiButton>
+        <UiButton>撥打電話</UiButton>
         <UiButton variant="outline" :to="`/caregiver/members/${alert.memberId}`">
-          View Location
+          查看位置
         </UiButton>
       </div>
 
       <UiButton variant="green" :disabled="sending" @click="respond('responding')">
         <AppIcon v-if="responded" name="check" :size="18" />
-        {{ responded ? '已回覆：我正在前往' : "I'm Responding" }}
+        {{ responded ? '已回覆：我正在前往' : '我正在前往' }}
       </UiButton>
       <UiButton variant="ghost" :disabled="sending" @click="respond('received')">
-        Confirm Received
+        我知道了
       </UiButton>
     </div>
 

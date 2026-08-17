@@ -10,19 +10,21 @@ const { user, ensureUser, setRole, needsOnboarding } = useSession()
 await ensureUser()
 
 const selected = ref<Role | ''>(user.value?.role ?? '')
+// 存檔後 needsOnboarding 會變，先記住進來時是不是新手流程
+const wasOnboarding = needsOnboarding.value
 const saving = ref(false)
 
 const roles = [
   {
     value: 'care-recipient' as const,
     icon: 'wheelchair' as const,
-    title: 'I am a Navigator',
+    title: '我要用它找路',
     desc: '我要找適合自己走的安全路線',
   },
   {
     value: 'caregiver' as const,
     icon: 'shield' as const,
-    title: 'I am a Caregiver',
+    title: '我要照顧家人',
     desc: '我要照顧家人，需要即時狀態與提醒',
   },
 ]
@@ -34,8 +36,14 @@ async function next() {
     await api.updateRole(selected.value)
     setRole(selected.value)
 
-    // 被照顧者先設定無障礙需求，照顧者先拿到家庭代碼
-    await navigateTo(selected.value === 'caregiver' ? '/onboarding/family-code' : '/onboarding/needs')
+    if (!wasOnboarding) {
+      // 從 Profile 進來改身分，改完回 Profile，不要掉進新手流程
+      await navigateTo('/profile')
+      return
+    }
+
+    // 新手流程：被照顧者先設定無障礙需求（之後拿到自己的連結代碼），照顧者直接去輸入代碼
+    await navigateTo(selected.value === 'caregiver' ? '/onboarding/connect' : '/onboarding/needs')
   } finally {
     saving.value = false
   }
@@ -44,8 +52,10 @@ async function next() {
 
 <template>
   <section class="screen welcome">
+    <ScreenHeader v-if="!needsOnboarding" title="變更身分" back="/profile" />
+
     <div class="center">
-      <h1 class="brand" style="font-size: 30px">Accessity</h1>
+      <AppLogo :size="64" layout="stack" :text-size="30" />
       <p class="body">
         {{ needsOnboarding ? '歡迎！先告訴我們你要怎麼使用 Accessity。' : '你可以隨時回來調整身分。' }}
       </p>
@@ -79,10 +89,10 @@ async function next() {
       :variant="selected ? 'primary' : 'ghost'"
       @click="next"
     >
-      {{ saving ? '設定中…' : needsOnboarding ? 'Get Started' : '儲存' }}
+      {{ saving ? '設定中…' : needsOnboarding ? '開始使用' : '儲存' }}
     </UiButton>
 
-    <p class="muted center">身分之後可以在 Profile 更改。</p>
+    <p class="muted center">身分之後可以在「我的」頁面更改。</p>
   </section>
 </template>
 

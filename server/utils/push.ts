@@ -41,7 +41,7 @@ async function sendToUser(user: UserDoc, payload: PushPayload) {
     },
     webpush: {
       fcmOptions: { link: url },
-      notification: { icon: '/mimo-icon.png', requireInteraction: payload.kind !== 'info' },
+      notification: { icon: '/logo-icon.png', requireInteraction: payload.kind !== 'info' },
     },
   }
 

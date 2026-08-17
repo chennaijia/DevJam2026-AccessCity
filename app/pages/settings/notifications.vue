@@ -36,9 +36,9 @@ watch(form, () => api.updateNotificationSettings(form), { deep: true })
 
 <template>
   <section class="screen screen--nav">
-    <ScreenHeader title="Notifications" back="/caregiver" />
+    <ScreenHeader title="通知" back="/caregiver" />
 
-    <h2 class="title-xl">Notification Settings</h2>
+    <h2 class="title-xl">通知設定</h2>
 
     <!-- 裝置推播：沒有這一層的話，提醒只有開著頁面才看得到 -->
     <UiCard :variant="status === 'granted' ? 'active' : 'soft'" padding="14px 16px">
@@ -68,47 +68,47 @@ watch(form, () => api.updateNotificationSettings(form), { deep: true })
       </div>
     </UiCard>
 
-    <div class="label">Caregiver</div>
+    <div class="label">照顧者</div>
     <ToggleRow
       v-model="form.caregiver.emergencyAlert"
-      title="Emergency Alert"
-      description="Manual SOS from a family member"
+      title="緊急求助提醒"
+      description="家人按下 SOS 時立刻通知"
     />
     <ToggleRow
       v-model="form.caregiver.safetyCheckAlert"
-      title="Safety Check Alert"
-      description="When a member does not respond"
+      title="安全確認提醒"
+      description="家人沒有回覆確認時通知"
     />
     <ToggleRow
       v-model="form.caregiver.stayDetection"
-      title="Stay Detection"
-      description="Set per member in Member Detail"
+      title="停留偵測"
+      description="每位家人的時間可在成員頁個別設定"
     />
     <ToggleRow
       v-model="form.caregiver.locationNotifications"
-      title="Location Notifications"
-      description="Arrival and departure updates"
+      title="位置通知"
+      description="出發與抵達時通知"
     />
 
-    <div class="label">Person receiving care</div>
+    <div class="label">被照顧者</div>
     <ToggleRow
       v-model="form.recipient.locationSharing"
-      title="Location Sharing"
-      description="Shared during trips and alerts"
+      title="位置分享"
+      description="行程進行中與發出提醒時分享位置"
     />
     <ToggleRow
       v-model="form.recipient.caregiverConnection"
-      title="Caregiver Connection"
-      description="Allow connected caregiver alerts"
+      title="照顧者連結"
+      description="允許已連結的照顧者收到提醒"
     />
     <ToggleRow
       v-model="form.recipient.safetyCheck"
-      title="Safety Check"
-      description="Ask if you are okay after long stops"
+      title="安全確認"
+      description="長時間停留時主動問你還好嗎"
     />
     <ToggleRow
       v-model="form.recipient.caregiverConnection"
-      title="Emergency Contact"
+      title="緊急聯絡人"
       :description="form.recipient.emergencyContactName"
     />
 

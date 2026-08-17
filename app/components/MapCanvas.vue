@@ -29,7 +29,13 @@ const props = withDefaults(
     /** 輪行台北無障礙通行點——勾 Wheelchair 時用吉祥物 icon 標示（IMG_4704.png） */
     facilityMarkers?: IconMarker[]
   }>(),
-  { height: '220px', showPark: true, markers: () => [], constructionMarkers: () => [], facilityMarkers: () => [] },
+  {
+    height: '220px',
+    showPark: true,
+    markers: () => [],
+    constructionMarkers: () => [],
+    facilityMarkers: () => [],
+  },
 )
 
 const config = useRuntimeConfig()
@@ -143,19 +149,51 @@ function buildInfoContent(point: IconMarker) {
   return box
 }
 
-/** 用同一隻吉祥物 icon（不同圖檔）畫一組定點 marker，畫之前先清掉上一批 */
-function drawIconMarkers(maps: any, existing: any[], points: IconMarker[], iconUrl: string) {
+/** 圖檔的長寬比（url → width/height），避免把直式圖硬塞進正方形而變形 */
+const iconAspects = new Map<string, number>()
+
+function loadIconAspect(url: string): Promise<number> {
+  const cached = iconAspects.get(url)
+  if (cached) return Promise.resolve(cached)
+
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const aspect = img.naturalWidth / img.naturalHeight || 1
+      iconAspects.set(url, aspect)
+      resolve(aspect)
+    }
+    img.onerror = () => resolve(1)
+    img.src = url
+  })
+}
+
+/** 用同一隻 icon（不同圖檔）畫一組定點 marker，畫之前先清掉上一批 */
+async function drawIconMarkers(
+  maps: any,
+  existing: any[],
+  points: IconMarker[],
+  iconUrl: string,
+  height = 28,
+) {
   existing.forEach((m) => m.setMap(null))
   existing.length = 0
   // 上一批標點裡如果有開著的資訊視窗，標點都清掉了就不該再留著
   infoWindow?.close()
-  if (!map) return
+  if (!map || !points.length) return
+
+  // 依原圖比例算寬度，並把錨點放在圖的底部中央（像圖釘的針尖）
+  const aspect = await loadIconAspect(iconUrl)
+  const width = Math.max(12, Math.round(height * aspect))
+  const size = new maps.Size(width, height)
+  const anchor = new maps.Point(width / 2, height)
+
   for (const point of points) {
     const marker = new maps.Marker({
       map,
       position: { lat: point.lat, lng: point.lng },
       title: point.label,
-      icon: { url: iconUrl, scaledSize: new maps.Size(36, 36), anchor: new maps.Point(18, 32) },
+      icon: { url: iconUrl, scaledSize: size, anchor },
     })
     if (point.lines?.length || point.title) {
       marker.addListener('click', () => {
@@ -170,11 +208,19 @@ function drawIconMarkers(maps: any, existing: any[], points: IconMarker[], iconU
 
 // 檔名大小寫要跟 public/ 裡的實際檔案一致：macOS 不分大小寫，但部署到 Linux 會 404
 function drawConstructionMarkers(maps: any) {
-  drawIconMarkers(maps, constructionMarkerObjs, props.showConstruction ? props.constructionMarkers : [], '/IMG_4703.png')
+  // 施工點數量少但重要，畫大一點
+  drawIconMarkers(
+    maps,
+    constructionMarkerObjs,
+    props.showConstruction ? props.constructionMarkers : [],
+    '/IMG_4703.png',
+    32,
+  )
 }
 
 function drawFacilityMarkers(maps: any) {
-  drawIconMarkers(maps, facilityMarkerObjs, props.facilityMarkers, '/IMG_4704.png')
+  // 無障礙通行點可能有幾十個，小一點才不會把地圖蓋掉
+  drawIconMarkers(maps, facilityMarkerObjs, props.facilityMarkers, '/icon.png', 24)
 }
 
 function locateUser(maps: any) {
@@ -211,19 +257,13 @@ onMounted(async () => {
   }
 })
 
-watch(
-  [() => props.routePolyline, () => props.comparePolyline],
-  async () => {
-    if (map && window.google?.maps) drawRoute(window.google.maps)
-  },
-)
+watch([() => props.routePolyline, () => props.comparePolyline], async () => {
+  if (map && window.google?.maps) drawRoute(window.google.maps)
+})
 
-watch(
-  [() => props.constructionMarkers, () => props.showConstruction],
-  () => {
-    if (map && window.google?.maps) drawConstructionMarkers(window.google.maps)
-  },
-)
+watch([() => props.constructionMarkers, () => props.showConstruction], () => {
+  if (map && window.google?.maps) drawConstructionMarkers(window.google.maps)
+})
 
 watch(
   () => props.facilityMarkers,

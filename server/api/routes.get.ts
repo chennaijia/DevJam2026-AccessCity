@@ -1,9 +1,10 @@
-import type { RouteOption, RouteStep } from '#shared/types/accessity'
+import type { PlanTraceStep, RouteOption, RouteStep, RoutesResponse } from '#shared/types/accessity'
 import { checkRouteAccessibilityCoverage, findNearbyAmenities, findRouteAccessibilityFacilities } from '../utils/wheelroute'
 import { checkRouteConstructionConflicts, findBlockingHit } from '../utils/construction'
 import { decodePolyline, destinationPoint } from '../utils/geo'
 import { planRoutes } from '../utils/routePlanner'
 import { extractNearbyPlaceType, findNearestPlace } from '../utils/places'
+import { runWithPlanLog, takePlanLines } from '../utils/planLog'
 
 interface GoogleRoute {
   distanceMeters?: number
@@ -43,11 +44,11 @@ function toRouteOption(
     id: `google-route-${index + 1}`,
     title: recommended ? 'Google 建議路線' : route.description || `替代路線 ${index + 1}`,
     badge: recommended ? 'recommended' : 'alternative',
-    badgeLabel: recommended ? 'RECOMMENDED' : 'ALTERNATIVE',
+    badgeLabel: recommended ? '推薦' : '替代路線',
     durationMinutes: Math.max(1, Math.ceil(durationSeconds(route.duration) / 60)),
     distanceMeters: route.distanceMeters,
     encodedPolyline: route.polyline?.encodedPolyline,
-    tags: hasAccessibilityNeed ? ['Walking route', '請留意現場無障礙設施'] : ['Walking route'],
+    tags: hasAccessibilityNeed ? ['步行路線', '請留意現場無障礙設施'] : ['步行路線'],
     reason: recommended ? '依 Google Routes API 的行人路線與預估時間推薦。' : undefined,
     steps,
   }
@@ -71,7 +72,7 @@ async function applyAccessibilityCheck(option: RouteOption): Promise<RouteOption
     option.accessibilityScore = Math.round(coverage.coverage * 100)
     if (coverage.missingCount > 0) {
       option.badge = 'not-recommended'
-      option.badgeLabel = 'NOT RECOMMENDED'
+      option.badgeLabel = '不建議'
       appendReason(option, `沿途 ${coverage.missingCount} 處查無已知無障礙通行點資料，可能不利於輪椅通行。`)
       option.tags = [...option.tags, '⚠️ 部分路段缺乏無障礙通行點資料']
     } else {
@@ -105,7 +106,7 @@ async function applyConstructionCheck(option: RouteOption): Promise<RouteOption>
   const blocking = conflicts.filter((c) => c.severity === 'blocked')
   if (blocking.length > 0) {
     option.badge = 'not-recommended'
-    option.badgeLabel = 'NOT RECOMMENDED'
+    option.badgeLabel = '不建議'
     appendReason(
       option,
       `沿途有 ${blocking.length} 處施工完全封閉（${blocking[0]?.section}），無法通行。`,
@@ -198,7 +199,7 @@ async function tryDetour(
     perfect.candidate.id = `${option.id}-detour`
     perfect.candidate.title = '系統自動繞道路線'
     perfect.candidate.badge = 'recommended'
-    perfect.candidate.badgeLabel = 'RECOMMENDED'
+    perfect.candidate.badgeLabel = '推薦'
     perfect.candidate.tags = [...perfect.candidate.tags, '🔄 已自動繞開施工封閉路段']
     perfect.candidate.reason = `原路線在「${hit.zone.section}」遇到施工封閉，系統已自動規劃繞道路線，已完全避開封閉路段。`
     return perfect.candidate
@@ -219,14 +220,45 @@ async function tryDetour(
   best.candidate.id = `${option.id}-detour`
   best.candidate.title = '系統自動繞道路線（部分改善）'
   best.candidate.badge = 'alternative'
-  best.candidate.badgeLabel = 'ALTERNATIVE'
+  best.candidate.badgeLabel = '替代路線'
   best.candidate.tags = [...best.candidate.tags, '🔄 已嘗試繞道，仍有部分施工路段']
   best.candidate.reason = `原路線在「${hit.zone.section}」遇到施工封閉，系統已嘗試自動繞道，將封閉路段從 ${originalBlockingCount} 處減少到 ${best.blockingCount} 處，但施工範圍較大，無法完全避開。`
   return best.candidate
 }
 
-export default defineEventHandler(async (event): Promise<RouteOption[]> => {
+export default defineEventHandler((event): Promise<RoutesResponse> => runWithPlanLog(async () => {
   const query = getQuery(event) as Record<string, string | undefined>
+
+  /**
+   * 規劃過程的執行軌跡：每一步實際做了什麼、花多久。
+   * 前端會把它顯示出來，讓人看得到系統是怎麼算的，而不是只看到結果。
+   */
+  const trace: PlanTraceStep[] = []
+  async function step<T>(
+    key: string,
+    label: string,
+    source: string | undefined,
+    run: () => Promise<T> | T,
+    describe?: (result: T) => string,
+  ): Promise<T> {
+    const startedAt = Date.now()
+    const result = await run()
+    trace.push({
+      key,
+      label,
+      source,
+      detail: describe?.(result),
+      // 這一步過程中各資料來源印出的訊息（抓到幾筆、比對結果…）
+      logs: takePlanLines(),
+      ms: Date.now() - startedAt,
+      status: 'done',
+    })
+    return result
+  }
+
+  function skip(key: string, label: string, detail: string) {
+    trace.push({ key, label, detail, ms: 0, status: 'skipped' })
+  }
   const destination = query.destination?.trim()
   if (!destination) throw createError({ statusCode: 400, statusMessage: '請提供目的地' })
 
@@ -270,16 +302,32 @@ export default defineEventHandler(async (event): Promise<RouteOption[]> => {
   if (!hasDestCoordinates && hasCoordinates) {
     const placeType = extractNearbyPlaceType(destination)
     if (placeType && config.googlePlacesApiKey) {
-      const nearest = await findNearestPlace(placeType, { lat, lng }, String(config.googlePlacesApiKey))
+      const nearest = await step(
+        'place',
+        `尋找最近的${placeType === 'subway_station' ? '捷運站' : '地點'}`,
+        'Google Places API',
+        () => findNearestPlace(placeType, { lat, lng }, String(config.googlePlacesApiKey)),
+        (found) => (found ? `定位到「${found.name}」` : '找不到符合的地點，改用文字搜尋'),
+      )
       if (nearest) {
         destinationTarget = { location: { latLng: { latitude: nearest.lat, longitude: nearest.lng } } }
         resolvedDestinationName = nearest.name
       }
+    } else {
+      skip('place', '解析目的地', `直接以「${destination}」搜尋`)
     }
+  } else {
+    skip('place', '解析目的地', hasDestCoordinates ? '已指定座標' : `直接以「${destination}」搜尋`)
   }
 
   try {
-    const routes = await callGoogleRoutes(apiKey, origin, destinationTarget)
+    const routes = await step(
+      'routes',
+      '取得候選步行路線',
+      'Google Routes API',
+      () => callGoogleRoutes(apiKey, origin, destinationTarget),
+      (list) => `回傳 ${list.length} 條候選路線`,
+    )
     if (!routes.length) throw createError({ statusCode: 404, statusMessage: '找不到可步行的路線' })
 
     const needs = `${query.needs ?? ''},${query.today ?? ''}`
@@ -293,11 +341,47 @@ export default defineEventHandler(async (event): Promise<RouteOption[]> => {
       for (const option of options) option.tags = [`📍 已定位到「${resolvedDestinationName}」`, ...option.tags]
     }
 
-    if (!needsSpecialHandling) return options
+    if (!needsSpecialHandling) {
+      skip('accessibility', '比對沿線無障礙設施', '這趟沒有勾選無障礙需求')
+      skip('construction', '比對道路施工資料', '這趟沒有勾選避開施工')
+      return { routes: options, trace }
+    }
 
     let scored = options
-    if (hasAccessibilityNeed) scored = await Promise.all(scored.map(applyAccessibilityCheck))
-    if (hasConstructionNeed) scored = await Promise.all(scored.map(applyConstructionCheck))
+
+    if (hasAccessibilityNeed) {
+      scored = await step(
+        'accessibility',
+        '比對沿線無障礙設施',
+        '臺北市無障礙通行資料',
+        () => Promise.all(scored.map(applyAccessibilityCheck)),
+        (list) =>
+          `檢查 ${list.length} 條路線，找到 ${list.reduce((sum, r) => sum + (r.accessibilityFacilities?.length ?? 0), 0)} 個通行點`,
+      )
+    } else {
+      skip('accessibility', '比對沿線無障礙設施', '這趟沒有勾選無障礙需求')
+    }
+
+    if (hasConstructionNeed) {
+      scored = await step(
+        'construction',
+        '比對道路施工資料',
+        '臺北市道路挖掘開放資料',
+        () => Promise.all(scored.map(applyConstructionCheck)),
+        (list) => {
+          const conflicts = list.reduce((sum, r) => sum + (r.constructionConflicts?.length ?? 0), 0)
+          const blocked = list.reduce(
+            (sum, r) => sum + (r.constructionConflicts?.filter((c) => c.severity === 'blocked').length ?? 0),
+            0,
+          )
+          return conflicts
+            ? `${conflicts} 處施工影響，其中 ${blocked} 處完全封閉`
+            : '沿線沒有施工影響'
+        },
+      )
+    } else {
+      skip('construction', '比對道路施工資料', '這趟沒有勾選避開施工')
+    }
 
     // 痛點是自主繞道，不是只有警示：完全封閉的路段要真的試著算一條繞開的路線出來。
     // 只針對「封閉衝突最少、最有機會繞成功」的那一條試，不用每條被擋的候選都試一輪，不然平行打太多 Google API 反而更慢。
@@ -311,14 +395,31 @@ export default defineEventHandler(async (event): Promise<RouteOption[]> => {
         )
       const bestCandidate = blockedOptions[0]
       if (bestCandidate) {
-        const detour = await tryDetour(apiKey, origin, destinationTarget, bestCandidate)
+        const detour = await step(
+          'detour',
+          '嘗試自動繞開封閉路段',
+          'Google Routes API（8 個方向平行試算）',
+          () => tryDetour(apiKey, origin, destinationTarget, bestCandidate),
+          (result) =>
+            result
+              ? result.badge === 'recommended'
+                ? '找到完全避開封閉路段的繞道路線'
+                : '找到部分改善的繞道路線'
+              : '試過 8 個方向，沒有更好的繞法',
+        )
         if (detour) scored.push(detour)
+      } else {
+        skip('detour', '嘗試自動繞開封閉路段', '沒有被完全封閉的路線，不需要繞道')
       }
     }
 
     // 路線規劃 Agent：在算好的事實裡選一條 recommended、幫每條寫理由，兩條以上路線才需要它
     const needsSummary = [query.needs, query.today].filter(Boolean).join(', ')
-    const plan = await planRoutes(
+    const plan = await step(
+      'agent',
+      'AI 依你的需求挑選推薦路線',
+      'Gemini（Route Planning Agent）',
+      () => planRoutes(
       scored.map((r) => ({
         id: r.id,
         durationMinutes: r.durationMinutes,
@@ -329,6 +430,8 @@ export default defineEventHandler(async (event): Promise<RouteOption[]> => {
       })),
       needsSummary,
       config.geminiApiKey ? String(config.geminiApiKey) : undefined,
+      ),
+      (result) => (result ? '已選出推薦路線並寫好推薦理由' : '未取得 AI 建議，改用規則排序'),
     )
 
     if (plan) {
@@ -336,14 +439,14 @@ export default defineEventHandler(async (event): Promise<RouteOption[]> => {
         // not-recommended 是硬規則判斷出來的安全性事實，Agent 不能覆蓋掉
         if (option.badge !== 'not-recommended') {
           option.badge = option.id === plan.recommendedRouteId ? 'recommended' : 'alternative'
-          option.badgeLabel = option.badge === 'recommended' ? 'RECOMMENDED' : 'ALTERNATIVE'
+          option.badgeLabel = option.badge === 'recommended' ? '推薦' : '替代路線'
         }
         const reason = plan.reasons[option.id]
         if (reason) option.reason = reason
       }
     }
 
-    return scored
+    return { routes: scored, trace }
   } catch (error: any) {
     if (error?.statusCode) throw error
     console.error('[routes] Google Routes API 呼叫失敗：', error)
@@ -352,4 +455,4 @@ export default defineEventHandler(async (event): Promise<RouteOption[]> => {
       statusMessage: error?.data?.error?.message || 'Google Routes API 暫時無法使用',
     })
   }
-})
+}))

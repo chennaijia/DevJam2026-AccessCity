@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
       {
         id: `e_${Date.now()}`,
         time: nowHHMM(),
-        title: 'Trip Ended',
+        title: '行程結束',
         detail: '行程結束',
         kind: 'arrival',
       },

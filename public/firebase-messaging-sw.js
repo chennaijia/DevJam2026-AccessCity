@@ -20,8 +20,8 @@ if (config.apiKey) {
 
     self.registration.showNotification(title ?? 'Accessity', {
       body: body ?? '',
-      icon: '/mimo-icon.png',
-      badge: '/mimo-icon.png',
+      icon: '/logo-icon.png',
+      badge: '/logo-icon.png',
       tag: payload.data?.alertId ?? 'accessity-alert',
       // 安全提醒不要自己消失，要讓照顧者一定看到
       requireInteraction: payload.data?.kind !== 'info',

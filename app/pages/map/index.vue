@@ -6,8 +6,8 @@ const { listen, listening, canListen } = useSpeech()
 const { data: savedPlaces } = await useAsyncData('map-home-places', () => api.getSavedPlaces())
 
 const filters = [
-  { key: 'wheelchair', label: 'Wheelchair' },
-  { key: 'safety', label: 'Safety' },
+  { key: 'wheelchair', label: '輪椅可行' },
+  { key: 'safety', label: '避開施工' },
 ]
 // safety 對應到後端既有的 avoid-construction 需求 key（跟「今天想避開施工」是同一個判斷邏輯）
 const FILTER_TO_NEED: Record<string, string> = { wheelchair: 'wheelchair', safety: 'avoid-construction' }
@@ -47,7 +47,7 @@ async function startPlanning() {
 
     <div class="map-home__top">
       <header class="row-between">
-        <h1 class="brand">Accessity</h1>
+        <AppLogo :size="26" :text-size="22" />
         <button class="icon-btn" aria-label="通知" @click="navigateTo('/notifications')">
           <AppIcon name="bell" :size="22" />
         </button>
@@ -55,7 +55,7 @@ async function startPlanning() {
 
       <div class="search">
         <AppIcon name="search" :size="20" />
-        <input v-model="destination" class="search__input" placeholder="Where to next?" />
+        <input v-model="destination" class="search__input" placeholder="接下來要去哪裡？" />
         <button
           class="icon-btn"
           :class="{ 'icon-btn--listening': listening }"
@@ -66,7 +66,7 @@ async function startPlanning() {
         </button>
       </div>
       <p class="muted" style="padding-left: 6px">
-        {{ listening ? '聽你說…' : 'Try "Find a ramp near the station."' }}
+        {{ listening ? '聽你說…' : '可以這樣說：「找捷運站附近有斜坡道的路」' }}
       </p>
 
       <div class="row" style="flex-wrap: wrap">
@@ -97,8 +97,8 @@ async function startPlanning() {
     </div>
 
     <div class="map-home__bottom">
-      <MimoBubble text="Where would you like to go today?" hard />
-      <UiButton hard @click="startPlanning">Start Planning →</UiButton>
+      <MimoBubble text="今天想去哪裡呢？" hard />
+      <UiButton hard @click="startPlanning">開始規劃路線 →</UiButton>
     </div>
 
     <BottomNav />

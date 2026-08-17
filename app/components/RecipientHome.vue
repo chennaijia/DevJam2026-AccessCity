@@ -81,7 +81,7 @@ async function startVoice() {
           <span class="loc-dot"><AppIcon name="pin" :size="18" /></span>
           <div>
             <div class="muted">現在位置</div>
-            <div class="title-md">{{ trip?.currentLocation ?? 'Main St. near 4th Ave' }}</div>
+            <div class="title-md">{{ trip?.currentLocation ?? '中山南路近仁愛路口' }}</div>
           </div>
         </div>
         <span class="muted">剛剛更新</span>

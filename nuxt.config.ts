@@ -14,9 +14,9 @@ export default defineNuxtConfig({
         { name: 'theme-color', content: '#0b5f5c' },
       ],
       link: [
-        // Mimo 當作 App 圖示
-        { rel: 'icon', type: 'image/png', href: '/mimo-icon.png' },
-        { rel: 'apple-touch-icon', href: '/mimo.png' },
+        // App 圖示用品牌標誌；吉祥物 Mimo 只出現在畫面裡
+        { rel: 'icon', type: 'image/png', href: '/logo-icon.png' },
+        { rel: 'apple-touch-icon', href: '/logo.png' },
       ],
     },
   },

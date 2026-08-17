@@ -17,23 +17,23 @@ else loadNotifications()
 const items = computed<{ name: NavIconName; label: string; to: string; badge?: number }[]>(() =>
   isCaregiver.value
     ? [
-        { name: 'home', label: 'Home', to: '/home' },
-        { name: 'map', label: 'Members', to: '/caregiver' },
-        { name: 'report', label: 'Alerts', to: '/caregiver/alerts', badge: pending.value.length },
+        { name: 'map', label: '家人', to: '/caregiver' },
+        { name: 'report', label: '提醒', to: '/caregiver/alerts', badge: pending.value.length },
+        { name: 'home', label: '首頁', to: '/home' },
         { name: 'mimo', label: 'Mimo', to: '/mimo' },
-        { name: 'profile', label: 'Profile', to: '/profile' },
+        { name: 'profile', label: '我的', to: '/profile' },
       ]
     : [
-        { name: 'map', label: 'Map', to: '/map' },
+        { name: 'map', label: '地圖', to: '/map' },
         {
           name: 'bell',
-          label: 'Notification',
+          label: '通知',
           to: '/notifications',
           badge: unread.value.length,
         },
-        { name: 'home', label: 'Home', to: '/home' },
+        { name: 'home', label: '首頁', to: '/home' },
         { name: 'mimo', label: 'Mimo', to: '/mimo' },
-        { name: 'profile', label: 'Profile', to: '/profile' },
+        { name: 'profile', label: '我的', to: '/profile' },
       ],
 )
 

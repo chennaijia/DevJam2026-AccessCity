@@ -3,7 +3,18 @@
  * AI Requirement Confirmation（企劃書 §6）
  * 使用者說一句話 → Requirement Agent 拆成 chips → 確認後才開始規劃路線。
  */
-const { destination, chips, chipNeeds, routes, todayNeeds, ignoreProfileNeeds, resolveOrigin } = usePlanning()
+const {
+  destination,
+  chips,
+  chipNeeds,
+  routes,
+  todayNeeds,
+  ignoreProfileNeeds,
+  resolveOrigin,
+  runPlanning,
+  planning,
+  planTrace,
+} = usePlanning()
 const { user } = useSession()
 const route = useRoute()
 const { listen, listening, canListen, speak } = useSpeech()
@@ -63,14 +74,15 @@ async function startNavigation() {
   navError.value = ''
   navigating.value = true
   try {
-    // TODO: 串接後端 —— GET /api/routes?destination=&needs=&today=
     const origin = await resolveOrigin()
-    routes.value = await api.getRoutes(
-      destination.value,
-      ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
-      [...todayNeeds.value, ...chipNeeds.value],
+    await runPlanning({
+      destination: destination.value,
+      needs: ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
       origin,
-    )
+    })
+
+    // 結果回來後先停一下，讓過程面板上的真實數字（幾個通行點、幾處施工）看得到再跳頁
+    await new Promise((resolve) => setTimeout(resolve, 1200))
     await navigateTo('/map/routes')
   } catch {
     navError.value = '找不到這個地點的路線，麻煩換個講法或確認地點名稱。'
@@ -183,6 +195,9 @@ if (initialDestination) await parse()
     </UiButton>
 
     <BottomNav />
+
+    <!-- 規劃過程：讓人看得到系統怎麼算的 -->
+    <PlanningProgress :open="planning" :trace="planTrace" />
   </section>
 </template>
 

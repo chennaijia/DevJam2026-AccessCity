@@ -1,11 +1,12 @@
-import { members } from '../../utils/repo'
+import { familyIdsOf, members } from '../../utils/repo'
 import { requireAppUser } from '../../utils/session'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event)
-  if (!user.familyId) return []
+  const ids = familyIdsOf(user)
+  if (!ids.length) return []
 
-  // Firestore 不保證順序，這裡固定排序讓畫面穩定
-  const list = await members.list({ familyId: user.familyId })
-  return list.sort((a, b) => a.id.localeCompare(b.id))
+  // 照顧者可能同時連結多位家人，把每個照護圈的成員合起來
+  const lists = await Promise.all(ids.map((familyId) => members.list({ familyId })))
+  return lists.flat().sort((a, b) => a.id.localeCompare(b.id))
 })

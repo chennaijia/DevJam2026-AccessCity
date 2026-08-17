@@ -29,12 +29,12 @@ const hasReroute = computed(() => !!trip.value?.events.some((e) => e.kind === 'r
     <div class="body-pad">
       <div class="row-between">
         <div>
-          <div class="title-md">Caregiver Dashboard</div>
+          <div class="title-md">照顧者總覽</div>
           <div class="row" style="gap: 6px">
             <span style="color: var(--green-strong); display: flex">
               <AppIcon name="activity" :size="18" />
             </span>
-            <span class="muted">Currently Monitoring: <b>{{ selected?.name }}</b></span>
+            <span class="muted">目前關注：<b>{{ selected?.name }}</b></span>
           </div>
         </div>
         <span class="mimo-avatar"><MimoMascot :size="46" /></span>
@@ -85,7 +85,7 @@ const hasReroute = computed(() => !!trip.value?.events.some((e) => e.kind === 'r
         <div class="loc-head">
           <div>
             <span class="title-md">{{ selected?.name }}</span>
-            <span class="trip-state">{{ onTrip ? 'On trip' : 'Idle' }}</span>
+            <span class="trip-state">{{ onTrip ? '行程進行中' : '目前沒有行程' }}</span>
           </div>
           <UiChip :tone="selected?.status === 'safe' ? 'green' : 'yellow'">
             {{ selected?.statusLabel }}
@@ -95,11 +95,11 @@ const hasReroute = computed(() => !!trip.value?.events.some((e) => e.kind === 'r
         <!-- Destination / ETA：企劃書 Care Dashboard 的必要欄位 -->
         <div v-if="onTrip" class="trip-strip">
           <div>
-            <div class="muted">Destination</div>
+            <div class="muted">目的地</div>
             <div style="font-weight: 700">{{ trip?.destination }}</div>
           </div>
           <div style="text-align: right">
-            <div class="muted">ETA</div>
+            <div class="muted">預計抵達</div>
             <div style="font-weight: 700">{{ trip?.eta }}</div>
           </div>
         </div>
@@ -116,18 +116,18 @@ const hasReroute = computed(() => !!trip.value?.events.some((e) => e.kind === 'r
         >
           <div class="loc-search">
             <AppIcon name="search" :size="13" />
-            <span>Search location</span>
+            <span>搜尋地點</span>
           </div>
 
           <div class="loc-callout">
             <AppIcon name="house" :size="14" />
             <div>
-              <b>Main St</b>
-              <div class="muted" style="font-size: 11px">Drop-off Point</div>
+              <b>{{ trip?.destination ?? '中山南路' }}</b>
+              <div class="muted" style="font-size: 11px">下車地點</div>
             </div>
           </div>
 
-          <div class="loc-start">Start: 14 Maple Ave</div>
+          <div class="loc-start">起點：{{ trip?.currentLocation ?? '楓葉街 14 號' }}</div>
         </MapCanvas>
 
         <div class="loc-foot">
@@ -143,25 +143,25 @@ const hasReroute = computed(() => !!trip.value?.events.some((e) => e.kind === 'r
 
       <UiCard variant="soft" padding="14px 16px">
         <div class="row" style="gap: 8px; color: var(--teal)">
-          <AppIcon name="chart" :size="18" /><span class="title-md">Weekly Overview</span>
+          <AppIcon name="chart" :size="18" /><span class="title-md">本週概況</span>
         </div>
         <div class="row" style="gap: 12px; margin-top: 10px">
           <div class="stat">
             <div class="stat__num">{{ overview?.kmTracked }}</div>
-            <div class="muted">km Tracked</div>
+            <div class="muted">公里紀錄</div>
           </div>
           <div class="stat">
             <div class="stat__num" style="color: var(--green-strong)">
               {{ overview?.safeArrivals }}
             </div>
-            <div class="muted">Safe Arrivals</div>
+            <div class="muted">次平安抵達</div>
           </div>
         </div>
       </UiCard>
 
       <UiCard variant="soft" padding="14px 16px">
         <div class="row" style="gap: 8px; color: var(--teal)">
-          <AppIcon name="history" :size="18" /><span class="title-md">Recent Activity</span>
+          <AppIcon name="history" :size="18" /><span class="title-md">最近活動</span>
         </div>
         <div class="activity">
           <div v-for="a in overview?.recentActivity" :key="a.id" class="row activity__row">

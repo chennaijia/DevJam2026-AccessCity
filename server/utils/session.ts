@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { ensureFamilySeed, users, type UserDoc } from './repo'
+import { ensureFamilySeed, familyIdsOf, users, type UserDoc } from './repo'
 
 /**
  * session cookie（nuxt-auth-utils 加密）→ App 內的使用者資料
@@ -56,11 +56,24 @@ export async function requireAppUser(event: H3Event): Promise<UserDoc> {
   return user
 }
 
-/** 照顧者 / 被照顧者所屬的家庭；沒有就 400 */
+/** 主要照護圈（被照顧者＝自己的；照顧者＝目前主要連結的那一位）；沒有就 400 */
 export async function requireFamilyId(event: H3Event): Promise<string> {
   const user = await requireAppUser(event)
-  if (!user.familyId) throw createError({ statusCode: 400, statusMessage: '尚未加入家庭' })
-  return user.familyId
+  const [first] = familyIdsOf(user)
+  if (!first) {
+    throw createError({
+      statusCode: 400,
+      statusMessage:
+        user.role === 'caregiver' ? '尚未連結任何家人' : '尚未建立照護圈，請先產生連結代碼',
+    })
+  }
+  return first
+}
+
+/** 這個使用者能不能存取某個照護圈（照顧者可能連結多位家人） */
+export async function canAccessFamily(event: H3Event, familyId: string): Promise<boolean> {
+  const user = await requireAppUser(event)
+  return familyIdsOf(user).includes(familyId)
 }
 
 export async function setAppSession(event: H3Event, user: UserDoc) {

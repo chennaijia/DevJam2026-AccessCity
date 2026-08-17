@@ -9,7 +9,7 @@ const explain = ref(false)
   <section class="screen screen--flush screen--nav">
     <header class="row-between" style="padding: 12px 16px">
       <button class="icon-btn" aria-label="選單"><AppIcon name="menu" :size="22" /></button>
-      <h1 class="brand">Accessity</h1>
+      <AppLogo :size="26" :text-size="22" />
       <button class="icon-btn" aria-label="通知" @click="navigateTo('/notifications')">
         <AppIcon name="bell" :size="22" />
       </button>
@@ -20,8 +20,8 @@ const explain = ref(false)
       { x: 68, y: 40, label: 'B', tone: 'teal' },
     ]">
       <div class="map__legend">
-        <UiChip tone="plain">Ⓐ Riverdale Shelter 0.8 mi · Currently Unsafe</UiChip>
-        <UiChip tone="plain">Ⓑ Community Center 2.4 mi · Safe</UiChip>
+        <UiChip tone="plain">Ⓐ 河濱避難所 0.8 公里 · 目前不安全</UiChip>
+        <UiChip tone="plain">Ⓑ 社區活動中心 2.4 公里 · 安全</UiChip>
       </div>
     </MapCanvas>
 
@@ -38,7 +38,7 @@ const explain = ref(false)
         </div>
 
         <div style="margin-top: 8px">
-          <UiChip v-if="s.recommended" tone="green-solid">★ Recommended</UiChip>
+          <UiChip v-if="s.recommended" tone="green-solid">★ 推薦</UiChip>
           <span v-else class="pill-bad"><AppIcon name="warn" :size="15" /> {{ s.headline }}</span>
         </div>
 
@@ -56,14 +56,14 @@ const explain = ref(false)
         </div>
       </UiCard>
 
-      <UiButton to="/map/routes">Go to Shelter B →</UiButton>
+      <UiButton to="/map/routes">前往社區活動中心 →</UiButton>
 
-      <UiButton variant="quiet" @click="explain = !explain">? Why this route?</UiButton>
+      <UiButton variant="quiet" @click="explain = !explain">？為什麼推薦這條路線</UiButton>
 
       <UiCard v-if="explain" variant="soft" padding="14px 16px">
         <!-- TODO: 串接後端 —— GET /api/routes/:id/explain（Navigation Agent 的決策說明） -->
         <p class="body">
-          這條路線避開了 Main St 的施工與淹水範圍，並且全程有無障礙坡道與可用電梯；雖然多 4
+          這條路線避開了中山南路的施工與淹水範圍，並且全程有無障礙坡道與可用電梯；雖然多 4
           分鐘，但可達性最高。
         </p>
       </UiCard>
