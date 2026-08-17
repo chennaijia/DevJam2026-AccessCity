@@ -1,0 +1,220 @@
+/**
+ * Demo 用的模擬資料。
+ * 前端（USE_MOCK = true 時）與簡易後端（server/utils/store.ts 的初始資料）共用同一份，
+ * 之後接真實資料庫時，只要換掉 server 端的資料來源即可。
+ */
+import type {
+  CareAlert,
+  Family,
+  Member,
+  NotificationSettings,
+  RequirementChip,
+  RouteOption,
+  Shelter,
+  Trip,
+  User,
+  WeeklyOverview,
+} from '#shared/types/accessity'
+
+export const mockUser: User = {
+  id: 'u_kai',
+  name: 'Kai Chuang',
+  email: 'kai@example.com',
+  role: 'care-recipient',
+  needs: ['wheelchair', 'mobility'],
+  familyCode: 'AC-72841',
+  connectedCaregiver: { id: 'u_naijia', name: '陳乃嘉' },
+}
+
+export const mockCaregiver: User = {
+  id: 'u_naijia',
+  name: '陳乃嘉',
+  email: 'naijia@example.com',
+  role: 'caregiver',
+  needs: [],
+  familyCode: 'AC-72841',
+  connectedCaregiver: null,
+}
+
+export const mockMembers: Member[] = [
+  {
+    id: 'm_kai',
+    name: 'Kai',
+    initial: 'K',
+    role: 'care-recipient',
+    needsLabel: 'Wheelchair · receiving care',
+    status: 'safe',
+    statusLabel: 'Safe',
+    lastLocation: 'Main St. near 4th Ave',
+    lastActivity: 'Walking · 4 min ago',
+    lastActivityAt: '4 minutes ago',
+    batteryPercent: 68,
+    stayAlertMinutes: 15,
+    notifications: { safetyCheck: true, location: true, emergency: true },
+  },
+  {
+    id: 'm_ama',
+    name: '阿嬤',
+    initial: '阿',
+    role: 'care-recipient',
+    needsLabel: 'Visual impairment · receiving care',
+    status: 'check-needed',
+    statusLabel: 'Check needed',
+    lastLocation: 'Central Park east gate',
+    lastActivity: 'Stationary · 16 min',
+    lastActivityAt: '16 minutes ago',
+    batteryPercent: 41,
+    stayAlertMinutes: 15,
+    invitePending: true,
+    notifications: { safetyCheck: true, location: false, emergency: true },
+  },
+]
+
+export const mockFamily: Family = {
+  id: 'f_chuang',
+  name: 'Chuang Family',
+  code: 'AC-72841',
+  codeExpiresInDays: 7,
+  members: mockMembers,
+}
+
+/** Requirement Agent 的解析結果（Scene 1：「我要去台大醫院，今天走路不太方便，也想避開施工」） */
+export const mockRequirementChips: RequirementChip[] = [
+  { key: 'destination', label: '台大醫院' },
+  { key: 'mobility', label: '行動協助' },
+  { key: 'avoid-construction', label: '避開施工' },
+  { key: 'voice', label: '語音導航' },
+]
+
+export const mockRoutes: RouteOption[] = [
+  {
+    id: 'r_fast',
+    title: 'Fastest Route',
+    badge: 'not-recommended',
+    badgeLabel: 'NOT RECOMMENDED',
+    durationMinutes: 12,
+    tags: [],
+    warning: 'Obstacles detected',
+    steps: [],
+  },
+  {
+    id: 'r_best',
+    title: 'Best for You',
+    badge: 'recommended',
+    badgeLabel: 'RECOMMENDED',
+    durationMinutes: 16,
+    tags: ['Step-free', 'Elevator', 'Clear'],
+    reason:
+      'Why this route? Avoids the construction on Main St and uses the functional station elevator.',
+    accessibilityScore: 96,
+    safetyScore: 92,
+    steps: [
+      { instruction: 'Turn right in 120m onto Main St', distanceMeters: 120, tag: 'Step-free' },
+      { instruction: 'Continue 80m, then cross at the ramp', distanceMeters: 80, tag: 'Ramp' },
+      { instruction: 'Take the station elevator to street level', distanceMeters: 40, tag: 'Elevator' },
+      { instruction: 'Arrive at Community Center', distanceMeters: 0, tag: 'Arrival' },
+    ],
+  },
+  {
+    id: 'r_comfort',
+    title: 'Comfortable',
+    badge: 'alternative',
+    badgeLabel: 'ALTERNATIVE',
+    durationMinutes: 19,
+    tags: ['Shady', 'Less traffic'],
+    steps: [],
+  },
+]
+
+export const mockShelters: Shelter[] = [
+  {
+    id: 's_alpha',
+    key: 'A',
+    name: 'School Alpha',
+    distanceLabel: '320m',
+    reachable: false,
+    headline: 'Not Reachable Safely',
+    note: 'Route crosses flood zone',
+    tags: [],
+    recommended: false,
+  },
+  {
+    id: 's_community',
+    key: 'B',
+    name: 'Community Center',
+    distanceLabel: '510m',
+    reachable: true,
+    headline: 'Safe Reachable Route',
+    tags: ['Wheelchair Accessible', 'Suitable for Flood Evacuation'],
+    recommended: true,
+  },
+]
+
+export const mockTrip: Trip = {
+  id: 't_1',
+  memberId: 'm_kai',
+  status: 'on-trip',
+  destination: '台大醫院',
+  eta: '16:58',
+  currentLocation: 'Main St. near 4th Ave',
+  startedAt: '16:25',
+  events: [
+    { id: 'e1', time: '16:25', title: 'Trip Started', detail: '前往台大醫院', kind: 'start' },
+    { id: 'e2', time: '16:32', title: 'Route Adjusted', detail: '前方道路施工，已重新導航', kind: 'reroute' },
+    { id: 'e3', time: '16:40', title: 'Rested 3 min', detail: '正常', kind: 'rest' },
+    { id: 'e4', time: '16:47', title: 'Check-in Triggered', detail: '非預期地點停留時間較長', kind: 'checkin' },
+  ],
+}
+
+export const mockWeeklyOverview: WeeklyOverview = {
+  kmTracked: 8.4,
+  safeArrivals: 3,
+  recentActivity: [
+    { id: 'a1', title: 'Morning Walk', detail: '1.2km · 25 mins', kind: 'walk' },
+    { id: 'a2', title: 'Safe Arrival', detail: 'Community Center • 9:45 AM', kind: 'arrival' },
+  ],
+}
+
+export const mockAlerts: CareAlert[] = [
+  {
+    id: 'al_safety',
+    kind: 'safety-check',
+    memberId: 'm_kai',
+    memberName: 'Kai',
+    title: 'Safety Alert',
+    message: 'Kai has not responded to the safety check.',
+    sourceLabel: 'Automatic Safety Alert',
+    location: 'Main St. near 4th Ave',
+    time: '16:42 · just now',
+    lastMovement: 'Stayed 18 minutes',
+    acknowledged: false,
+  },
+  {
+    id: 'al_emergency',
+    kind: 'emergency',
+    memberId: 'm_kai',
+    memberName: 'Kai',
+    title: 'Emergency Alert',
+    message: 'Kai has requested immediate assistance.',
+    sourceLabel: 'Manual SOS',
+    location: 'Main St. near 4th Ave',
+    time: '16:42 · just now',
+    lastMovement: '18 minutes ago',
+    acknowledged: false,
+  },
+]
+
+export const mockNotificationSettings: NotificationSettings = {
+  caregiver: {
+    emergencyAlert: true,
+    safetyCheckAlert: true,
+    stayDetection: true,
+    locationNotifications: false,
+  },
+  recipient: {
+    locationSharing: true,
+    caregiverConnection: true,
+    safetyCheck: true,
+    emergencyContactName: '陳乃嘉',
+  },
+}

@@ -1,0 +1,268 @@
+/* ===========================================================================
+   Accessity / AccessCity — Design tokens
+   視覺基調：柔和白卡（rounded card + 淡邊框 + 柔和陰影 + teal 主色）
+   地圖／導航畫面上的浮層才使用深色描邊（--line-strong），對應設計稿。
+   =========================================================================== */
+
+:root {
+  --bg: #f7f6f2;
+  --surface: #ffffff;
+  --surface-sunken: #f1f3ef;
+  --ink: #10120f;
+  --ink-soft: #4a4f49;
+  --muted: #7c817a;
+
+  --teal: #0b5f5c;
+  --teal-dark: #084a48;
+  --teal-tint: #e7f1ef;
+
+  --green: #a8f0b5;
+  --green-strong: #1a7a48;
+  --green-soft: #e2f8e5;
+
+  --yellow: #f5b301;
+  --yellow-soft: #fdf1cf;
+  --red: #d64f45;
+  --red-soft: #fbe4e2;
+
+  --line: #e4e3dc;
+  --line-strong: #10120f;
+
+  --radius: 16px;
+  --radius-btn: 14px;
+  --radius-lg: 22px;
+
+  --shadow-card: 0 1px 2px rgba(16, 18, 15, 0.05);
+  --shadow-soft: 0 2px 10px rgba(16, 18, 15, 0.07);
+  --shadow-lift: 0 6px 18px rgba(16, 18, 15, 0.12);
+  --shadow-hard: 3px 4px 0 var(--line-strong);
+
+  --screen-w: 390px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #eceae4;
+  color: var(--ink);
+  font-family:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', 'Noto Sans TC',
+    'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--teal);
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+/* --- 手機外框 ------------------------------------------------------------ */
+.phone {
+  width: 100%;
+  max-width: var(--screen-w);
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 18px 28px;
+}
+
+.screen--flush {
+  padding: 0;
+  gap: 0;
+}
+
+.screen--nav {
+  padding-bottom: 96px;
+}
+
+/* --- 文字 ---------------------------------------------------------------- */
+.title-xl {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.title-lg {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.title-md {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.body {
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.center {
+  text-align: center;
+}
+
+.brand {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--teal);
+  letter-spacing: -0.02em;
+}
+
+/* --- 版面 ---------------------------------------------------------------- */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.grow {
+  flex: 1;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* --- 表單 ---------------------------------------------------------------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field > span {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-btn);
+  box-shadow: var(--shadow-card);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.input::placeholder {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.checkbox-box {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid #c9c8c0;
+  border-radius: 6px;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--teal);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+/* --- 其他 ---------------------------------------------------------------- */
+.divider-or {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
