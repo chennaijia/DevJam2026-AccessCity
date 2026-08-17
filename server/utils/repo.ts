@@ -37,10 +37,23 @@ export const DEMO_FAMILY_ID = 'f_chuang'
 export interface UserDoc extends User {
   familyId: string | null
   todayNeeds: string[]
+  /** 使用者自己改過名字；之後 Google 登入不要再覆蓋 */
+  nameCustomized?: boolean
+  /** 完成（或明確跳過）新手流程的時間；null = 還沒走完 */
+  onboardingCompletedAt?: string | null
+  /** Web Push 的裝置 token（一個帳號可能有多個裝置） */
+  fcmTokens?: string[]
 }
-export interface FamilyDoc extends Omit<Family, 'members'> {}
+export interface FamilyDoc extends Omit<Family, 'members'> {
+  /** 建立這個家庭的照顧者 */
+  ownerId?: string
+  /** 代碼產生時間，用來判斷有沒有過期 */
+  codeCreatedAt?: string
+}
 export interface MemberDoc extends Member {
   familyId: string
+  /** 對應的帳號；種子資料沒有帳號所以是選填 */
+  userId?: string
 }
 export interface AlertDoc extends CareAlert {
   familyId: string
@@ -101,10 +114,19 @@ export async function ensureFamilySeed() {
       name: mockFamily.name,
       code: mockFamily.code,
       codeExpiresInDays: mockFamily.codeExpiresInDays,
+      codeCreatedAt: new Date().toISOString(),
+      ownerId: 'u_naijia',
     },
   ])
 
-  await members.seed(mockMembers.map((m) => ({ ...m, familyId: DEMO_FAMILY_ID })))
+  await members.seed(
+    mockMembers.map((m) => ({
+      ...m,
+      familyId: DEMO_FAMILY_ID,
+      // 種子成員對應 demo 帳號，這樣 demo 登入後看到的是自己
+      userId: m.id === 'm_kai' ? 'u_kai' : undefined,
+    })),
+  )
 
   await alerts.seed(
     mockAlerts.map((a) => ({ ...a, familyId: DEMO_FAMILY_ID, createdAt: new Date().toISOString() })),
@@ -112,10 +134,24 @@ export async function ensureFamilySeed() {
 
   await trips.seed([{ ...mockTrip, familyId: DEMO_FAMILY_ID }])
 
+  const seededAt = new Date().toISOString()
   await users.seed([
-    { ...mockUser, familyId: DEMO_FAMILY_ID, todayNeeds: [] },
-    { ...mockCaregiver, familyId: DEMO_FAMILY_ID, todayNeeds: [] },
+    { ...mockUser, familyId: DEMO_FAMILY_ID, todayNeeds: [], onboardingCompletedAt: seededAt },
+    { ...mockCaregiver, familyId: DEMO_FAMILY_ID, todayNeeds: [], onboardingCompletedAt: seededAt },
   ])
+
+  // 舊資料補綁定：demo 成員 m_kai 對應 demo 帳號 u_kai，
+  // 否則同一個人會同時存在「種子成員」與「加入後新建的成員」兩筆
+  const seededKai = await members.get('m_kai')
+  if (seededKai && !seededKai.userId) await members.update('m_kai', { userId: 'u_kai' })
+
+  // demo 帳號視為已完成新手流程，登入後直接進主頁
+  for (const id of ['u_kai', 'u_naijia']) {
+    const demo = await users.get(id)
+    if (demo && !demo.onboardingCompletedAt) {
+      await users.update(id, { onboardingCompletedAt: new Date().toISOString() })
+    }
+  }
 }
 
 /**
@@ -159,6 +195,81 @@ export async function ensureUserSeed(userId: string) {
   }
 }
 
+/** 家庭代碼：AC- 開頭的 5 位數字，和設計稿一致 */
+export function generateFamilyCode() {
+  return `AC-${Math.floor(10000 + Math.random() * 89999)}`
+}
+
+/** 代碼是否還有效 */
+export function isCodeExpired(family: FamilyDoc) {
+  if (!family.codeCreatedAt) return false
+  const expiresAt =
+    new Date(family.codeCreatedAt).getTime() + family.codeExpiresInDays * 24 * 60 * 60 * 1000
+  return Date.now() > expiresAt
+}
+
+/** 照顧者第一次進到家庭頁時，幫他建立自己的家庭 */
+export async function createFamilyFor(user: UserDoc): Promise<FamilyDoc> {
+  const family: FamilyDoc = {
+    id: `f_${user.id}_${Date.now()}`,
+    name: `${user.name} 的家庭`,
+    code: generateFamilyCode(),
+    codeExpiresInDays: 7,
+    codeCreatedAt: new Date().toISOString(),
+    ownerId: user.id,
+  }
+
+  await families.set(family)
+  await users.update(user.id, { familyId: family.id, familyCode: family.code })
+  return family
+}
+
+/**
+ * 把帳號登記成家庭成員（照顧者的 Dashboard 是讀 members，不是讀 users）。
+ * 同一個帳號重複加入不會產生第二筆。
+ */
+export async function addMemberFor(user: UserDoc, familyId: string): Promise<MemberDoc> {
+  const existing = (await members.list({ familyId } as Partial<MemberDoc>)).find(
+    (m) => m.userId === user.id,
+  )
+  if (existing) return existing
+
+  const needsLabel = user.needs.length
+    ? `${user.needs
+        .map((n) =>
+          n === 'wheelchair'
+            ? 'Wheelchair'
+            : n === 'visual'
+              ? 'Visual impairment'
+              : n === 'mobility'
+                ? 'Mobility assistance'
+                : 'Other',
+        )
+        .join(' · ')} · receiving care`
+    : 'receiving care'
+
+  const member: MemberDoc = {
+    id: `m_${user.id}`,
+    familyId,
+    userId: user.id,
+    name: user.name,
+    initial: user.name.slice(0, 1).toUpperCase(),
+    role: 'care-recipient',
+    needsLabel,
+    status: 'safe',
+    statusLabel: 'Safe',
+    lastLocation: '尚未取得位置',
+    lastActivity: '剛加入',
+    lastActivityAt: '剛剛',
+    batteryPercent: 100,
+    stayAlertMinutes: 15,
+    notifications: { safetyCheck: true, location: true, emergency: true },
+  }
+
+  await members.set(member)
+  return member
+}
+
 /** 由 Firebase 的登入資料建立或更新使用者 */
 export async function upsertUser(profile: {
   id: string
@@ -175,8 +286,15 @@ export async function upsertUser(profile: {
     (await users.list()).find((u) => u.email.toLowerCase() === profile.email.toLowerCase())
 
   if (existing) {
+    // 這個欄位是後來才加的：已經有家庭或已設定需求的舊帳號，視為早就走完流程
+    const backfilledOnboarding =
+      existing.onboardingCompletedAt ??
+      (existing.familyId || existing.needs.length ? new Date().toISOString() : null)
+
     const updated = await users.update(existing.id, {
-      name: profile.name || existing.name,
+      onboardingCompletedAt: backfilledOnboarding,
+      // 自己改過的名字優先，其餘欄位每次登入都跟 Google 同步
+      name: existing.nameCustomized ? existing.name : profile.name || existing.name,
       avatar: profile.avatar ?? existing.avatar,
       provider: profile.provider ?? existing.provider,
     })
@@ -192,11 +310,12 @@ export async function upsertUser(profile: {
     provider: profile.provider ?? 'google',
     role: 'care-recipient',
     needs: [],
-    // Demo：新帳號直接加入示範家庭，一登入就看得到資料
-    familyCode: mockFamily.code,
-    familyId: DEMO_FAMILY_ID,
-    connectedCaregiver: { id: 'u_naijia', name: '陳乃嘉' },
+    // 家庭要自己建立（照顧者）或用代碼加入（被照顧者）
+    familyCode: null,
+    familyId: null,
+    connectedCaregiver: null,
     todayNeeds: [],
+    onboardingCompletedAt: null,
   }
 
   await users.set(created)

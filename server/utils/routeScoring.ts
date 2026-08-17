@@ -47,7 +47,8 @@ const KIND_LABELS: Record<string, string> = {
 let wheelCache: { expires: number; data: WheelFacility[] } | undefined
 let constructionCache: { expires: number; data: ConstructionFeature[] } | undefined
 
-export function decodePolyline(encoded = ''): Point[] {
+/** 這裡用的是 { lat, lng } 版本，僅供本檔使用；對外請用 geo.ts 的 decodePolyline */
+function decodePolyline(encoded = ''): Point[] {
   const points: Point[] = []
   let index = 0
   let lat = 0

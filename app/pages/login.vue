@@ -4,14 +4,9 @@
  * 按下按鈕後整頁跳轉到 /api/auth/google，由後端和 Google 換 token，
  * 成功後寫入加密的 session cookie 再導回 App。
  */
-const { setUser, applyPendingRole, homePath, pendingRole } = useSession()
+const { setUser, nextPath } = useSession()
 const { signInWithGoogle } = useFirebaseAuth()
 const route = useRoute()
-
-/** 第一頁選的身分，讓使用者知道自己正以什麼身分登入，也可以退回去改 */
-const roleLabel = computed(() =>
-  pendingRole.value === 'caregiver' ? '照顧者' : pendingRole.value ? '被照顧者' : '',
-)
 
 /** Google 登入有沒有設定好（只回傳布林值，不會拿到金鑰） */
 const { data: authConfig } = await useFetch('/api/auth/config')
@@ -39,7 +34,8 @@ async function loginWithGoogle() {
     // 2. 後端用 Admin SDK 驗證 idToken，建立我們自己的 session cookie
     const user = await api.loginWithFirebase(idToken)
     setUser(user)
-    await navigateTo(homePath.value)
+    // 3. 第一次登入先走新手流程，之後直接進主頁
+    await navigateTo(nextPath())
   } catch (err) {
     console.error('[login] Google 登入失敗：', err)
     error.value = errorMessages.popup!
@@ -53,10 +49,9 @@ async function loginAsDemo() {
   error.value = ''
   loading.value = true
   try {
-    const user = await api.demoLogin(pendingRole.value ?? 'care-recipient')
+    const user = await api.demoLogin('care-recipient')
     setUser(user)
-    await applyPendingRole()
-    await navigateTo(homePath.value)
+    await navigateTo(nextPath())
   } catch {
     error.value = '登入失敗，請再試一次'
   } finally {
@@ -67,22 +62,9 @@ async function loginAsDemo() {
 
 <template>
   <section class="screen login">
-    <button
-      type="button"
-      class="login__back"
-      aria-label="返回選擇身分"
-      @click="navigateTo('/onboarding/welcome')"
-    >
-      ←
-    </button>
-
     <div class="login__brand center">
       <h1 class="brand" style="font-size: 34px">Accessity</h1>
       <p class="body">Reachable routes for everyone.</p>
-      <p v-if="roleLabel" class="login__role">
-        以 <b>{{ roleLabel }}</b> 身分登入 ·
-        <NuxtLink to="/onboarding/welcome">重新選擇</NuxtLink>
-      </p>
     </div>
 
     <p v-if="error" class="center" style="color: var(--red); font-weight: 600">{{ error }}</p>
@@ -137,29 +119,6 @@ async function loginAsDemo() {
   justify-content: center;
   gap: 18px;
   padding-top: 64px;
-}
-
-.login__back {
-  position: absolute;
-  top: 16px;
-  left: 12px;
-  width: 44px;
-  height: 44px;
-  border: none;
-  background: transparent;
-  font-size: 22px;
-  cursor: pointer;
-  border-radius: 12px;
-}
-
-.login__role {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.login__role a {
-  font-weight: 700;
 }
 
 .login__brand {

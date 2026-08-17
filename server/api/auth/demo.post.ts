@@ -11,10 +11,14 @@ export default defineEventHandler(async (event) => {
   }))
 
   await ensureFamilySeed()
-  const all = await users.list()
+
+  // 固定用種子帳號，不要抓到真實 Google 登入過的使用者
+  const demoId = role === 'caregiver' ? 'u_naijia' : 'u_kai'
   const user =
-    all.find((u) => (role === 'caregiver' ? u.role === 'caregiver' : u.role === 'care-recipient')) ??
-    all[0]
+    (await users.get(demoId)) ??
+    (await users.list()).find((u) =>
+      role === 'caregiver' ? u.role === 'caregiver' : u.role === 'care-recipient',
+    )
 
   if (!user) throw createError({ statusCode: 500, statusMessage: 'Demo 帳號尚未建立' })
 

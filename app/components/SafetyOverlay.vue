@@ -34,6 +34,7 @@ function showToast(text: string) {
 }
 
 async function sendSos() {
+  if (import.meta.client) navigator.vibrate?.([100, 50, 100])
   // POST /api/alerts/sos —— 後端會立刻建立 Care Alert 通知照顧者
   await api.sendSos()
   sosOpen.value = false
@@ -50,6 +51,8 @@ function askCheckin() {
   checkinOpen.value = true
   remaining.value = WAIT_SECONDS
   speak('你好像停了一段時間，還好嗎？', { force: true })
+  // 使用者可能沒在看螢幕，震動一下（行動裝置才有效）
+  if (import.meta.client) navigator.vibrate?.([200, 100, 200])
 
   clearInterval(timer)
   timer = setInterval(() => {

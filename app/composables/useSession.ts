@@ -7,17 +7,8 @@ import type { AccessNeed, Role, User } from '#shared/types/accessity'
 export function useSession() {
   const user = useState<User | null>('accessity:user', () => null)
 
-  /**
-   * 登入前在歡迎頁選的身分。
-   * 因為 Google 登入會整頁跳轉，記憶體狀態會消失，所以放在 cookie，
-   * 後端 /api/auth/google 的 callback 會讀它來設定新帳號的角色。
-   */
-  const pendingRole = useCookie<Role | null>('accessity_pending_role', {
-    default: () => null,
-    maxAge: 60 * 30,
-    sameSite: 'lax',
-    path: '/',
-  })
+  /** 還沒走完新手流程（登入後由後端的 onboardingCompletedAt 決定） */
+  const needsOnboarding = computed(() => !!user.value && !user.value.onboardingCompletedAt)
 
   const role = computed<Role>(() => user.value?.role ?? 'care-recipient')
   const isCaregiver = computed(() => role.value === 'caregiver')
@@ -46,7 +37,6 @@ export function useSession() {
     await useFirebaseAuth().signOutFirebase()
     await api.logout()
     user.value = null
-    pendingRole.value = null
   }
 
   /**
@@ -55,19 +45,25 @@ export function useSession() {
    */
   const homePath = computed(() => '/home')
 
-  /** 套用歡迎頁選的身分（Demo 登入用；Google 登入是在後端 callback 直接套用） */
-  async function applyPendingRole() {
-    if (!pendingRole.value) return
-    const next = pendingRole.value
-    await api.updateRole(next)
-    setRole(next)
-    pendingRole.value = null
+  /** 走完新手流程 */
+  async function completeOnboarding() {
+    setUser(await api.completeOnboarding())
+  }
+
+  /**
+   * 登入後（或每次進站）該去哪一頁：
+   * 新帳號從選身分開始，走完的人直接進主頁。
+   */
+  function nextPath() {
+    if (!user.value) return '/login'
+    return needsOnboarding.value ? '/onboarding/role' : homePath.value
   }
 
   return {
     user,
-    pendingRole,
-    applyPendingRole,
+    needsOnboarding,
+    completeOnboarding,
+    nextPath,
     role,
     isCaregiver,
     isLoggedIn,

@@ -16,6 +16,11 @@ export function usePlanning() {
   const originPlace = useState<string>('accessity:origin-place', () => '')
   /** 測試用：開了就不送帳號設定裡的固定 needs（例如輪椅），只送這次對話解析出的 chips，方便單獨測某一項 */
   const ignoreProfileNeeds = useState<boolean>('accessity:ignore-profile-needs', () => false)
+  /**
+   * 地圖上的施工吉祥物 icon 開關（純顯示用，不影響後端的施工比對與繞道）。
+   * 放在共用狀態，路線頁關掉之後導航頁也維持關閉。
+   */
+  const showConstructionIcons = useState<boolean>('accessity:show-construction-icons', () => true)
 
   const selectedRoute = computed(
     () => routes.value.find((r) => r.id === selectedRouteId.value) ?? routes.value[1] ?? routes.value[0],
@@ -75,6 +80,7 @@ export function usePlanning() {
     origin,
     originPlace,
     ignoreProfileNeeds,
+    showConstructionIcons,
     resolveOrigin,
     toggleTodayNeed,
     planTo,

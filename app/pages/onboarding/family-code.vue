@@ -1,6 +1,13 @@
 <script setup lang="ts">
 /** 照顧者：產生並分享 Family Code */
+const { needsOnboarding, completeOnboarding } = useSession()
 const { data: family, refresh } = await useAsyncData('family-code', () => api.getFamily())
+
+/** 新手流程的最後一步 */
+async function finish() {
+  if (needsOnboarding.value) await completeOnboarding()
+  await navigateTo('/home')
+}
 const copied = ref(false)
 
 async function copyCode() {
@@ -60,7 +67,7 @@ async function regenerate() {
       </UiCard>
     </div>
 
-    <UiButton to="/caregiver">Go to Dashboard</UiButton>
+    <UiButton @click="finish">Go to Dashboard</UiButton>
 
     <p class="muted center">
       Anyone with this code can join your family group. Regenerate it if shared by mistake.

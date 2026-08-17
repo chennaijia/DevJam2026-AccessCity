@@ -9,6 +9,7 @@ const {
   ignoreProfileNeeds,
   origin,
   originPlace,
+  showConstructionIcons,
 } = usePlanning()
 const { user } = useSession()
 const testQuery = useRoute().query
@@ -40,24 +41,34 @@ if (!routes.value.length) {
 selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
 
 /** Google 原本給的第一條路線，沒套用任何無障礙／施工考量，拿來跟目前選的路線做視覺比較 */
-const baselineRoute = computed(() => routes.value.find((r) => !r.id.includes('-detour')) ?? routes.value[0])
+const baselineRoute = computed(
+  () => routes.value.find((r) => !r.id.includes('-detour')) ?? routes.value[0],
+)
 const showComparison = computed(
   () => !!baselineRoute.value && baselineRoute.value.id !== selectedRoute.value?.id,
 )
 
 // 勾 Safety 才在地圖上標施工地點；勾 Wheelchair 才標無障礙通行點——沒勾就不顯示，維持原本畫面乾淨
-const showSafetyMarkers = computed(() => todayNeeds.value.includes('avoid-construction'))
+const showSafetyMarkers = computed(
+  () => todayNeeds.value.includes('avoid-construction') && showConstructionIcons.value,
+)
 const showWheelchairMarkers = computed(() => todayNeeds.value.includes('wheelchair'))
 const constructionMarkers = computed(() =>
-  showSafetyMarkers.value
-    ? (selectedRoute.value?.constructionConflicts ?? [])
-        .filter((c) => c.location)
-        .map((c) => ({ lat: c.location!.lat, lng: c.location!.lng, label: c.section }))
-    : [],
+  showSafetyMarkers.value ? toConstructionMarkers(selectedRoute.value?.constructionConflicts) : [],
+)
+/** 開關上顯示的施工數量；沒勾 Safety 就沒比對過，顯示 0 會誤導成「沿途沒施工」 */
+const constructionCount = computed(() =>
+  todayNeeds.value.includes('avoid-construction')
+    ? toConstructionMarkers(selectedRoute.value?.constructionConflicts).length
+    : null,
 )
 const facilityMarkers = computed(() =>
   showWheelchairMarkers.value
-    ? (selectedRoute.value?.accessibilityFacilities ?? []).map((f) => ({ lat: f.lat, lng: f.lng, label: f.name }))
+    ? (selectedRoute.value?.accessibilityFacilities ?? []).map((f) => ({
+        lat: f.lat,
+        lng: f.lng,
+        label: f.name,
+      }))
     : [],
 )
 
@@ -69,38 +80,56 @@ async function go() {
 </script>
 
 <template>
-  <section class="screen screen--flush">
-    <div style="padding: 12px 16px 0">
+  <section class="screen screen--flush routes">
+    <div class="routes__header">
       <ScreenHeader title="Accessity" back="/map/plan" />
     </div>
 
     <MapCanvas
-      height="270px"
+      height="100%"
+      class="routes__map"
       show-route
       :route-polyline="selectedRoute?.encodedPolyline"
       :compare-polyline="showComparison ? baselineRoute?.encodedPolyline : undefined"
       :show-construction="showSafetyMarkers"
       :construction-markers="constructionMarkers"
       :facility-markers="facilityMarkers"
-      class="map"
-      :markers="[
-        { x: 16, y: 88, label: '', tone: 'teal' },
-        { x: 69, y: 20, label: '', tone: 'green' },
-      ]"
     >
       <div class="map__chips">
         <UiChip tone="plain"><AppIcon name="pin" :size="15" /> Current Location</UiChip>
-        <button class="layers" aria-label="圖層"><AppIcon name="layers" :size="18" /></button>
+        <div class="row" style="gap: 8px">
+          <!-- 施工圖標開關：只是把地圖上的吉祥物收起來，路線本身仍然有避開施工 -->
+          <!-- <UiChip
+            as="button"
+            :tone="showConstructionIcons ? 'green' : 'grey'"
+            :aria-pressed="showConstructionIcons"
+            :title="
+              showConstructionIcons ? '隱藏地圖上的施工圖標' : '顯示地圖上的施工圖標'
+            "
+            @click="showConstructionIcons = !showConstructionIcons"
+          >
+            🚧 施工圖標
+            <span class="chip-state">{{ showConstructionIcons ? '開' : '關' }}</span>
+            <span v-if="constructionCount" class="chip-count">{{ constructionCount }}</span>
+          </UiChip> -->
+          <button class="layers" aria-label="圖層"><AppIcon name="layers" :size="18" /></button>
+        </div>
       </div>
       <div v-if="showComparison" class="map__legend">
-        <span class="map__legend-item"><i class="map__legend-line map__legend-line--solid" />目前選擇的路線</span>
-        <span class="map__legend-item"><i class="map__legend-line map__legend-line--dashed" />原始 Google 路線（未套用考量）</span>
+        <span class="map__legend-item"
+          ><i class="map__legend-line map__legend-line--solid" />目前選擇的路線</span
+        >
+        <span class="map__legend-item"
+          ><i class="map__legend-line map__legend-line--dashed" />原始 Google
+          路線（未套用考量）</span
+        >
       </div>
     </MapCanvas>
 
-    <div class="sheet">
-      <div class="sheet__grabber" />
-      <h2 class="title-md" style="margin-bottom: 4px">Suggested Routes</h2>
+    <BottomSheet :snap-points="[0.42, 0.9]">
+      <template #header>
+        <h2 class="title-md">Suggested Routes</h2>
+      </template>
 
       <div class="stack">
         <UiCard
@@ -165,26 +194,45 @@ async function go() {
       </div>
 
       <div class="note">It's 4 mins longer, but you can definitely reach this one!</div>
-    </div>
 
-    <div class="footer">
-      <UiButton @click="go">
-        <AppIcon name="walk" :size="18" />
-        Go with Safety
-      </UiButton>
-    </div>
+      <template #footer>
+        <UiButton @click="go">
+          <AppIcon name="walk" :size="18" />
+          Go with Safety
+        </UiButton>
+      </template>
+    </BottomSheet>
   </section>
 </template>
 
 <style scoped>
-.map {
+.routes {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.routes__map {
+  position: absolute;
+  inset: 0;
   border-radius: 0;
+}
+
+.routes__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, var(--bg) 55%, rgba(247, 246, 242, 0));
 }
 
 .map__chips {
   display: flex;
   justify-content: space-between;
-  padding: 12px;
+  /* 讓開浮在上面的標題列 */
+  padding: 64px 12px 12px;
 }
 
 .map__legend {
@@ -225,6 +273,22 @@ async function go() {
   border-top-style: dashed;
 }
 
+.chip-state {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.chip-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
 .layers {
   width: 40px;
   height: 40px;
@@ -232,24 +296,6 @@ async function go() {
   border: 2px solid var(--line);
   background: var(--surface);
   cursor: pointer;
-}
-
-.sheet {
-  flex: 1;
-  background: var(--bg);
-  border-radius: 20px 20px 0 0;
-  margin-top: -14px;
-  padding: 12px 16px 100px;
-  position: relative;
-  z-index: 2;
-}
-
-.sheet__grabber {
-  width: 46px;
-  height: 5px;
-  border-radius: 999px;
-  background: #d3d1c9;
-  margin: 0 auto 12px;
 }
 
 .warn {
@@ -293,17 +339,5 @@ async function go() {
   font-size: 13px;
   font-weight: 700;
   transform: rotate(-2deg);
-}
-
-.footer {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: var(--screen-w);
-  padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, rgba(247, 246, 242, 0), var(--bg) 30%);
-  z-index: 20;
 }
 </style>

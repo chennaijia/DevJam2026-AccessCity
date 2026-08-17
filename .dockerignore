@@ -1,0 +1,19 @@
+node_modules
+.nuxt
+.output
+.nitro
+.cache
+.data
+.git
+.github
+.vscode
+.claude
+.DS_Store
+*.log
+
+# 金鑰絕對不能進映像檔，Cloud Run 用 Secret Manager 注入
+.env
+.env.*
+!.env.example
+service-account.json
+*.b64

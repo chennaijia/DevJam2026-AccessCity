@@ -19,6 +19,10 @@ export interface User {
   role: Role
   needs: AccessNeed[]
   familyCode: string | null
+  /** 所屬家庭；還沒建立或還沒加入時是 null */
+  familyId?: string | null
+  /** 完成新手流程的時間；null / undefined = 還沒走完 */
+  onboardingCompletedAt?: string | null
   connectedCaregiver: { id: string; name: string } | null
 }
 
