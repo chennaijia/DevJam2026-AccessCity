@@ -22,11 +22,11 @@ withDefaults(
   <span class="logo" :class="`logo--${layout}`">
     <img
       src="/logo.png"
-      alt="Accessity"
+      alt="AccessCity"
       :style="{ height: `${size}px`, width: 'auto' }"
       class="logo__mark"
     />
-    <span v-if="text" class="brand" :style="{ fontSize: `${textSize}px` }">Accessity</span>
+    <span v-if="text" class="brand" :style="{ fontSize: `${textSize}px` }">AccessCity</span>
   </span>
 </template>
 

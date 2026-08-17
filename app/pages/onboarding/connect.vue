@@ -8,6 +8,7 @@ const { setUser, needsOnboarding, completeOnboarding } = useSession()
 const code = ref('')
 const joining = ref(false)
 const error = ref('')
+const success = ref('')
 
 // 已經連結的家人（照顧者可以同時連結多位）
 const { data: family, refresh } = await useAsyncData('caregiver-connections', () =>
@@ -24,6 +25,7 @@ const REASONS: Record<string, string> = {
 
 async function connect() {
   error.value = ''
+  success.value = ''
   joining.value = true
   try {
     const res = await api.joinFamily(code.value)
@@ -31,10 +33,15 @@ async function connect() {
       error.value = REASONS[res.reason ?? 'not-found'] ?? '代碼不正確'
       return
     }
+    success.value =
+      res.reason === 'already'
+        ? `已經連結過「${res.family?.name ?? '這位家人'}」`
+        : `已成功連結「${res.family?.name ?? '家人'}」`
     code.value = ''
     await refresh()
     setUser(await api.getMe())
   } catch {
+    success.value = ''
     error.value = '連線失敗，請再試一次'
   } finally {
     joining.value = false
@@ -43,6 +50,7 @@ async function connect() {
 
 async function disconnect(familyId: string) {
   if (!confirm('解除後就看不到這位家人的狀況了，確定嗎？')) return
+  success.value = ''
   await api.disconnectFamily({ familyId })
   await refresh()
   setUser(await api.getMe())
@@ -56,12 +64,12 @@ async function finish() {
 
 <template>
   <section class="screen">
-    <ScreenHeader title="Accessity" :back="needsOnboarding ? '/onboarding/role' : '/caregiver'" />
+    <ScreenHeader title="AccessCity" :back="needsOnboarding ? '/onboarding/role' : '/caregiver'" />
 
     <div>
       <h2 class="title-xl">連結你要照顧的家人</h2>
       <p class="body">
-        請家人打開 Accessity 的「你的連結代碼」，把 AC- 開頭的代碼給你，輸入後就能看到他的狀況。
+        請家人打開 AccessCity 的「你的連結代碼」，把 AC- 開頭的代碼給你，輸入後就能看到他的狀況。
       </p>
     </div>
 
@@ -78,6 +86,15 @@ async function finish() {
         {{ joining ? '連結中…' : '連結家人' }}
       </UiButton>
       <p v-if="error" class="muted" style="color: var(--red); margin-top: 8px">{{ error }}</p>
+      <p
+        v-if="success"
+        class="muted"
+        role="status"
+        style="color: var(--green-strong); margin-top: 8px; font-weight: 700"
+      >
+        <AppIcon name="check" :size="15" />
+        {{ success }}
+      </p>
     </UiCard>
 
     <div class="label">已連結的家人</div>

@@ -31,13 +31,11 @@ async function next() {
 
 <template>
   <section class="screen">
-    <ScreenHeader title="Accessity" :back="needsOnboarding ? '/onboarding/role' : '/profile'" />
+    <ScreenHeader title="AccessCity" :back="needsOnboarding ? '/onboarding/role' : '/profile'" />
 
     <div>
       <h2 class="title-xl">你的無障礙需求</h2>
-      <p class="body">
-        符合的都可以勾選。這會決定我們推薦哪些路線，跟你的身分是分開的。
-      </p>
+      <p class="body">符合的都可以勾選。這會決定我們推薦哪些路線，跟你的身分是分開的。</p>
     </div>
 
     <div class="label">無障礙需求</div>

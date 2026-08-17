@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
   await users.update(user.id, {
     familyIds: rest,
     familyId: rest[0] ?? null,
-    familyCode: rest.length ? user.familyCode : null,
+    familyCode: null,
   })
 
   // 對方的「已連結照顧者」也要清掉

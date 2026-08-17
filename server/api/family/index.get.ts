@@ -9,13 +9,19 @@ export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event)
 
   if (user.role === 'care-recipient') {
-    const family = user.familyId ? await families.get(user.familyId) : null
-    const own = family ?? (await createFamilyFor(user))
+    // familyId 可能是使用者之前以照顧者身分連結的家庭，不能直接當成自己的代碼。
+    // 代碼只屬於 ownerId 對應的被照顧者；角色切換或舊資料也在這裡自動校正。
+    const assigned = user.familyId ? await families.get(user.familyId) : null
+    const owned =
+      assigned?.ownerId === user.id
+        ? assigned
+        : ((await families.list({ ownerId: user.id })).at(0) ?? null)
+    const own = owned ?? (await createFamilyFor(user))
 
     // 代碼以照護圈為準：使用者身上那份是快取，重新產生後可能過期
-    if (user.familyCode !== own.code) {
+    if (user.familyId !== own.id || user.familyCode !== own.code) {
       invalidateUserCache(user.id)
-      await users.update(user.id, { familyCode: own.code })
+      await users.update(user.id, { familyId: own.id, familyCode: own.code })
     }
 
     const caregivers = (await users.list({ familyId: own.id }))

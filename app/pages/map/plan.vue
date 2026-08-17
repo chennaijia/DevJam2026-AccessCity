@@ -122,7 +122,7 @@ if (initialDestination) await parse()
 
 <template>
   <section class="screen screen--nav">
-    <ScreenHeader title="Accessity" back="/home" />
+    <ScreenHeader title="AccessCity" back="/home" />
 
     <div>
       <h2 class="title-lg">你今天想去哪裡？</h2>
@@ -132,7 +132,7 @@ if (initialDestination) await parse()
     </div>
 
     <!-- 測試用：帳號設定裡的固定需求（如輪椅）預設一定會送進 /api/routes，開這個開關可以只測這次對話的 chips -->
-    <UiCard padding="10px 14px">
+    <!-- <UiCard padding="10px 14px">
       <div class="row-between">
         <div>
           <div class="title-md">忽略帳號固定需求</div>
@@ -144,7 +144,7 @@ if (initialDestination) await parse()
         </div>
         <UiToggle v-model="ignoreProfileNeeds" label="忽略帳號固定需求" />
       </div>
-    </UiCard>
+    </UiCard> -->
 
     <UiCard padding="14px 16px">
       <div class="origin-row">

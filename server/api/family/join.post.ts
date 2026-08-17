@@ -35,7 +35,8 @@ export default defineEventHandler(async (event) => {
     familyIds: [...familyIds],
     // 主要照護圈設成第一個，畫面預設看這一個
     familyId: user.familyId ?? target.id,
-    familyCode: target.code,
+    // familyCode 是被照顧者自己的分享碼；照顧者只保存可存取的 familyIds。
+    familyCode: null,
   })
 
   // 讓被照顧者知道自己被誰照顧著

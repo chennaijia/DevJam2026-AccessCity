@@ -50,7 +50,7 @@ async function finish() {
 
 <template>
   <section class="screen">
-    <ScreenHeader title="Accessity" :back="needsOnboarding ? '/onboarding/needs' : '/profile'" />
+    <ScreenHeader title="AccessCity" :back="needsOnboarding ? '/onboarding/needs' : '/profile'" />
 
     <div>
       <h2 class="title-xl">你的連結代碼</h2>
@@ -66,7 +66,9 @@ async function finish() {
     </UiCard>
 
     <div class="row">
-      <UiButton variant="outline" @click="copyCode">{{ copied ? '已複製！' : '複製代碼' }}</UiButton>
+      <UiButton variant="outline" @click="copyCode">{{
+        copied ? '已複製！' : '複製代碼'
+      }}</UiButton>
       <UiButton @click="share">分享代碼</UiButton>
     </div>
 

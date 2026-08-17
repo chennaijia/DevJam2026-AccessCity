@@ -93,7 +93,7 @@ async function go() {
 <template>
   <section class="screen screen--flush routes">
     <div class="routes__header">
-      <ScreenHeader title="Accessity" back="/map/plan" />
+      <ScreenHeader title="AccessCity" back="/map/plan" />
     </div>
 
     <MapCanvas

@@ -87,7 +87,7 @@ async function signOut() {
     <LinkRow
       v-if="user?.role === 'caregiver'"
       label="已連結的家人"
-      :value="user?.familyCode ? '管理連結' : '尚未連結，點此輸入代碼'"
+      value="查看、連結或解除家人"
       to="/onboarding/connect"
     />
     <LinkRow
