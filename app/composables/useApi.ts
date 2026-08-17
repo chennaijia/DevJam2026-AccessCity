@@ -64,6 +64,16 @@ export const api = {
     return request<User>('/me', { method: 'PATCH', body: { role } })
   },
 
+  /** 標記新手流程完成（或明確跳過） */
+  async completeOnboarding(): Promise<User> {
+    return request<User>('/me/onboarding', { method: 'POST' })
+  },
+
+  /** 修改顯示名稱（家庭成員清單也會同步更新） */
+  async updateProfileName(name: string): Promise<User> {
+    return request<User>('/me', { method: 'PATCH', body: { name } })
+  },
+
   async updateNeeds(needs: AccessNeed[]): Promise<User> {
     return request<User>('/me', { method: 'PATCH', body: { needs } })
   },
@@ -78,8 +88,23 @@ export const api = {
     return request<Family>('/family/code', { method: 'POST' })
   },
 
-  async joinFamily(code: string): Promise<{ ok: boolean; family: Family }> {
+  /** 用家庭代碼加入；失敗時 reason 會說明原因 */
+  async joinFamily(code: string): Promise<{
+    ok: boolean
+    reason: 'empty' | 'not-found' | 'expired' | null
+    family: Family | null
+  }> {
     return request('/family/join', { method: 'POST', body: { code } })
+  },
+
+  /** 被照顧者離開家庭 */
+  async leaveFamily(): Promise<ApiOk> {
+    return request('/family/leave', { method: 'POST' })
+  },
+
+  /** 照顧者把成員移出家庭 */
+  async removeMember(memberId: string): Promise<ApiOk> {
+    return request(`/family/members/${memberId}`, { method: 'DELETE' })
   },
 
   async acceptInvite(inviteId: string): Promise<ApiOk> {

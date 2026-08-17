@@ -44,6 +44,20 @@ const { pending, load: loadAlerts } = useAlerts()
 await loadAlerts()
 const memberAlerts = computed(() => pending.value.filter((a) => a.memberId === id))
 
+const removing = ref(false)
+
+/** 把成員移出家庭：對方的帳號也會脫離，之後看不到彼此 */
+async function removeMember() {
+  if (!confirm(`確定要把 ${member.value?.name} 移出家庭嗎？`)) return
+  removing.value = true
+  try {
+    await api.removeMember(id)
+    await navigateTo('/caregiver')
+  } finally {
+    removing.value = false
+  }
+}
+
 function call() {
   // TODO: 正式版改成 tel: 連結或 VoIP；此處先留接口
   navigateTo(`tel:0000000000`, { external: true })
@@ -125,6 +139,10 @@ function call() {
       <UiButton @click="call">Call</UiButton>
       <UiButton variant="outline">Message</UiButton>
     </div>
+
+    <UiButton variant="quiet" :disabled="removing" @click="removeMember">
+      {{ removing ? '移除中…' : '將此成員移出家庭' }}
+    </UiButton>
 
     <BottomNav />
   </section>

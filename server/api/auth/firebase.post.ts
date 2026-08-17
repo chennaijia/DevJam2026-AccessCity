@@ -1,7 +1,6 @@
 import { getFirebaseAuth } from '../../utils/firebase'
 import { upsertUser } from '../../utils/repo'
 import { setAppSession } from '../../utils/session'
-import type { Role } from '#shared/types/accessity'
 
 /**
  * Firebase 登入：前端用 Firebase SDK 完成 Google 登入後，把 idToken 送過來，
@@ -37,18 +36,8 @@ export default defineEventHandler(async (event) => {
     provider: 'google',
   })
 
-  // 登入前在歡迎頁選的身分（cookie 帶過來的）
-  const pendingRole = getCookie(event, 'accessity_pending_role') as Role | undefined
-  if (pendingRole === 'caregiver' || pendingRole === 'care-recipient') {
-    Object.assign(user, await usersUpdateRole(user.id, pendingRole))
-    deleteCookie(event, 'accessity_pending_role')
-  }
-
+  // 身分改成登入後在 /onboarding/role 選：
+  // 之前用 cookie 帶身分進來，會讓「老帳號回訪時不小心點錯」直接把角色改掉。
   await setAppSession(event, user)
   return user
 })
-
-async function usersUpdateRole(id: string, role: Role) {
-  const { users } = await import('../../utils/repo')
-  return await users.update(id, { role })
-}

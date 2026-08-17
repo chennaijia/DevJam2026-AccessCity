@@ -59,3 +59,28 @@ export function samplePolyline(points: [number, number][], stepMeters = 40): [nu
   }
   return sampled
 }
+
+/** 從一個點往某個方位角、距離幾公尺外，算出新的座標——用來在障礙點旁邊生出一個繞道用的中繼點 */
+export function destinationPoint(
+  start: [number, number],
+  bearingDeg: number,
+  distanceMeters: number,
+): [number, number] {
+  const R = EARTH_RADIUS_M
+  const delta = distanceMeters / R
+  const theta = (bearingDeg * Math.PI) / 180
+  const phi1 = (start[0] * Math.PI) / 180
+  const lambda1 = (start[1] * Math.PI) / 180
+
+  const phi2 = Math.asin(
+    Math.sin(phi1) * Math.cos(delta) + Math.cos(phi1) * Math.sin(delta) * Math.cos(theta),
+  )
+  const lambda2 =
+    lambda1 +
+    Math.atan2(
+      Math.sin(theta) * Math.sin(delta) * Math.cos(phi1),
+      Math.cos(delta) - Math.sin(phi1) * Math.sin(phi2),
+    )
+
+  return [(phi2 * 180) / Math.PI, (((lambda2 * 180) / Math.PI + 540) % 360) - 180]
+}

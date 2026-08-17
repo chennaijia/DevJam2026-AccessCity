@@ -6,7 +6,8 @@
 const { foreground } = usePush()
 
 watch(foreground, (message) => {
-  if (!message) return
+  // 緊急求助交給 EmergencyAlertModal，這裡不重複顯示
+  if (!message || message.kind === 'emergency') return
   setTimeout(() => (foreground.value = null), 8000)
 })
 

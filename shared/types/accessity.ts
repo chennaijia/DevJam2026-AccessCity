@@ -19,6 +19,10 @@ export interface User {
   role: Role
   needs: AccessNeed[]
   familyCode: string | null
+  /** 所屬家庭；還沒建立或還沒加入時是 null */
+  familyId?: string | null
+  /** 完成新手流程的時間；null / undefined = 還沒走完 */
+  onboardingCompletedAt?: string | null
   connectedCaregiver: { id: string; name: string } | null
 }
 
@@ -71,6 +75,15 @@ export interface ConstructionZone {
   until: string
   severity: 'blocked' | 'narrowed'
   note: string
+  /** 施工現場座標，地圖上顯示吉祥物 icon 用；沒比對到座標時才會缺 */
+  location?: { lat: number; lng: number }
+}
+
+/** 輪行台北的無障礙通行點（斜坡道/出入口），地圖上顯示吉祥物 icon 用 */
+export interface AccessibilityFacility {
+  lat: number
+  lng: number
+  name: string
 }
 
 export interface RouteOption {
@@ -90,6 +103,8 @@ export interface RouteOption {
   segments?: string[]
   /** 比對後撞到的施工路段（前端會顯示在路線卡與導航畫面） */
   constructionConflicts?: ConstructionZone[]
+  /** 沿途查到的無障礙通行點，勾 Wheelchair 時才會有值，地圖上顯示吉祥物 icon 用 */
+  accessibilityFacilities?: AccessibilityFacility[]
   steps: RouteStep[]
 }
 

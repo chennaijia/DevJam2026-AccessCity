@@ -9,5 +9,7 @@ onMounted(refresh)
   <div class="phone">
     <slot />
     <PushToast />
+    <!-- 緊急求助不能只躺在通知清單，任何頁面都要跳出來 -->
+    <EmergencyAlertModal />
   </div>
 </template>

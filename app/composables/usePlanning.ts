@@ -9,12 +9,23 @@ export function usePlanning() {
   const chips = useState<RequirementChip[]>('accessity:chips', () => [])
   const routes = useState<RouteOption[]>('accessity:routes', () => [])
   const selectedRouteId = useState<string>('accessity:selected-route', () => '')
-  const todayNeeds = useState<string[]>('accessity:today-needs', () => [])
+  // 預設帶 wheelchair，對應首頁 Wheelchair 篩選器原本就預設勾選的樣子
+  const todayNeeds = useState<string[]>('accessity:today-needs', () => ['wheelchair'])
   const origin = useState<{ lat: number; lng: number } | null>('accessity:route-origin', () => null)
+  /** 測試用：開了就不送帳號設定裡的固定 needs（例如輪椅），只送這次對話解析出的 chips，方便單獨測某一項 */
+  const ignoreProfileNeeds = useState<boolean>('accessity:ignore-profile-needs', () => false)
+  /**
+   * 地圖上的施工吉祥物 icon 開關（純顯示用，不影響後端的施工比對與繞道）。
+   * 放在共用狀態，路線頁關掉之後導航頁也維持關閉。
+   */
+  const showConstructionIcons = useState<boolean>('accessity:show-construction-icons', () => true)
 
   const selectedRoute = computed(
     () => routes.value.find((r) => r.id === selectedRouteId.value) ?? routes.value[1] ?? routes.value[0],
   )
+
+  /** Mimo 解析出的 chips（除了 destination）要一起送進 /api/routes，不然「避開施工」之類的需求永遠到不了後端 */
+  const chipNeeds = computed(() => chips.value.map((c) => c.key).filter((k) => k !== 'destination'))
 
   function toggleTodayNeed(key: string) {
     todayNeeds.value = todayNeeds.value.includes(key)
@@ -56,11 +67,14 @@ export function usePlanning() {
   return {
     destination,
     chips,
+    chipNeeds,
     routes,
     selectedRouteId,
     selectedRoute,
     todayNeeds,
     origin,
+    ignoreProfileNeeds,
+    showConstructionIcons,
     resolveOrigin,
     toggleTodayNeed,
     planTo,

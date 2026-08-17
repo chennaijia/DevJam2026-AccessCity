@@ -21,10 +21,13 @@ export function usePush() {
   const status = useState<PushPermission>('accessity:push', () => 'default')
   const busy = useState('accessity:push-busy', () => false)
   /** 前景收到的推播（系統通知不會跳，要自己顯示） */
-  const foreground = useState<{ title: string; body: string; url?: string } | null>(
-    'accessity:push-message',
-    () => null,
-  )
+  const foreground = useState<{
+    title: string
+    body: string
+    url?: string
+    kind?: string
+    alertId?: string
+  } | null>('accessity:push-message', () => null)
 
   const isConfigured = computed(() => !!config?.vapidKey && !!config?.messagingSenderId)
 
@@ -78,6 +81,8 @@ export function usePush() {
           title: payload.notification?.title ?? 'Accessity',
           body: payload.notification?.body ?? '',
           url: payload.data?.url,
+          kind: payload.data?.kind,
+          alertId: payload.data?.alertId,
         }
       })
 

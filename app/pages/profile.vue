@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { user, ensureUser, logout } = useSession()
+const { user, setUser, ensureUser, logout } = useSession()
 await ensureUser()
 
 const needLabels: Record<string, string> = {
@@ -7,6 +7,15 @@ const needLabels: Record<string, string> = {
   wheelchair: 'Wheelchair',
   mobility: 'Mobility assistance',
   other: 'Other',
+}
+
+/** 改名字：成功回 undefined，失敗回訊息給輸入框顯示 */
+async function saveName(name: string) {
+  try {
+    setUser(await api.updateProfileName(name))
+  } catch (error) {
+    return (error as { statusMessage?: string })?.statusMessage ?? '儲存失敗，請再試一次'
+  }
 }
 
 async function signOut() {
@@ -32,9 +41,19 @@ async function signOut() {
         <span class="muted">已使用 Google 帳號登入</span>
       </div>
     </UiCard>
-    <!-- TODO: 串接後端 —— PATCH /api/me（修改姓名 / Email） -->
-    <LinkRow label="Name" :value="user?.name ?? '—'" to="/profile" />
-    <LinkRow label="Email" :value="user?.email ?? '—'" to="/profile" />
+    <EditableRow
+      label="Name"
+      :value="user?.name ?? ''"
+      placeholder="你希望家人怎麼稱呼你"
+      :on-save="saveName"
+    />
+
+    <!-- Email 由 Google 帳號決定，不開放修改 -->
+    <UiCard padding="14px 16px">
+      <div class="muted">Email</div>
+      <div class="title-md">{{ user?.email ?? '—' }}</div>
+      <div class="muted" style="margin-top: 4px">由 Google 帳號提供，無法修改</div>
+    </UiCard>
 
     <div class="label">My Role</div>
     <UiCard variant="active" padding="14px 16px">

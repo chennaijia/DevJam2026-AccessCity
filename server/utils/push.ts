@@ -13,7 +13,7 @@ export interface PushPayload {
   /** 點通知要開的頁面 */
   url?: string
   alertId?: string
-  kind?: 'alert' | 'info'
+  kind?: 'alert' | 'info' | 'emergency'
 }
 
 /** 把失效的 token 從使用者身上清掉，否則會越積越多 */

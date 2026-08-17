@@ -1,17 +1,59 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, origin } = usePlanning()
+const {
+  destination,
+  routes,
+  selectedRouteId,
+  selectedRoute,
+  todayNeeds,
+  chipNeeds,
+  ignoreProfileNeeds,
+  origin,
+  showConstructionIcons,
+} = usePlanning()
 const { user } = useSession()
 
 if (!routes.value.length) {
   // TODO: 串接後端 —— GET /api/routes?destination=&needs=
   routes.value = await api.getRoutes(
     destination.value || '台大醫院',
-    user.value?.needs ?? [],
-    todayNeeds.value,
+    ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
+    [...todayNeeds.value, ...chipNeeds.value],
     origin.value,
   )
 }
 selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
+
+/** Google 原本給的第一條路線，沒套用任何無障礙／施工考量，拿來跟目前選的路線做視覺比較 */
+const baselineRoute = computed(
+  () => routes.value.find((r) => !r.id.includes('-detour')) ?? routes.value[0],
+)
+const showComparison = computed(
+  () => !!baselineRoute.value && baselineRoute.value.id !== selectedRoute.value?.id,
+)
+
+// 勾 Safety 才在地圖上標施工地點；勾 Wheelchair 才標無障礙通行點——沒勾就不顯示，維持原本畫面乾淨
+const showSafetyMarkers = computed(
+  () => todayNeeds.value.includes('avoid-construction') && showConstructionIcons.value,
+)
+const showWheelchairMarkers = computed(() => todayNeeds.value.includes('wheelchair'))
+const constructionMarkers = computed(() =>
+  showSafetyMarkers.value ? toConstructionMarkers(selectedRoute.value?.constructionConflicts) : [],
+)
+/** 開關上顯示的施工數量；沒勾 Safety 就沒比對過，顯示 0 會誤導成「沿途沒施工」 */
+const constructionCount = computed(() =>
+  todayNeeds.value.includes('avoid-construction')
+    ? toConstructionMarkers(selectedRoute.value?.constructionConflicts).length
+    : null,
+)
+const facilityMarkers = computed(() =>
+  showWheelchairMarkers.value
+    ? (selectedRoute.value?.accessibilityFacilities ?? []).map((f) => ({
+        lat: f.lat,
+        lng: f.lng,
+        label: f.name,
+      }))
+    : [],
+)
 
 async function go() {
   // TODO: 串接後端 —— POST /api/trips { destination, routeId }（開始行程並開始回傳位置）
@@ -31,15 +73,39 @@ async function go() {
       class="routes__map"
       show-route
       :route-polyline="selectedRoute?.encodedPolyline"
-      :show-construction="routes.some((r) => r.constructionConflicts?.length)"
-      :markers="[
-        { x: 16, y: 88, label: '', tone: 'teal' },
-        { x: 69, y: 20, label: '', tone: 'green' },
-      ]"
+      :compare-polyline="showComparison ? baselineRoute?.encodedPolyline : undefined"
+      :show-construction="showSafetyMarkers"
+      :construction-markers="constructionMarkers"
+      :facility-markers="facilityMarkers"
     >
       <div class="map__chips">
         <UiChip tone="plain"><AppIcon name="pin" :size="15" /> Current Location</UiChip>
-        <button class="layers" aria-label="圖層"><AppIcon name="layers" :size="18" /></button>
+        <div class="row" style="gap: 8px">
+          <!-- 施工圖標開關：只是把地圖上的吉祥物收起來，路線本身仍然有避開施工 -->
+          <!-- <UiChip
+            as="button"
+            :tone="showConstructionIcons ? 'green' : 'grey'"
+            :aria-pressed="showConstructionIcons"
+            :title="
+              showConstructionIcons ? '隱藏地圖上的施工圖標' : '顯示地圖上的施工圖標'
+            "
+            @click="showConstructionIcons = !showConstructionIcons"
+          >
+            🚧 施工圖標
+            <span class="chip-state">{{ showConstructionIcons ? '開' : '關' }}</span>
+            <span v-if="constructionCount" class="chip-count">{{ constructionCount }}</span>
+          </UiChip> -->
+          <button class="layers" aria-label="圖層"><AppIcon name="layers" :size="18" /></button>
+        </div>
+      </div>
+      <div v-if="showComparison" class="map__legend">
+        <span class="map__legend-item"
+          ><i class="map__legend-line map__legend-line--solid" />目前選擇的路線</span
+        >
+        <span class="map__legend-item"
+          ><i class="map__legend-line map__legend-line--dashed" />原始 Google
+          路線（未套用考量）</span
+        >
       </div>
     </MapCanvas>
 
@@ -150,6 +216,60 @@ async function go() {
   justify-content: space-between;
   /* 讓開浮在上面的標題列 */
   padding: 64px 12px 12px;
+}
+
+.map__legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-card);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.map__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map__legend-line {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 3px solid;
+}
+
+.map__legend-line--solid {
+  border-color: #0b5f5c;
+}
+
+.map__legend-line--dashed {
+  border-color: #9a978d;
+  border-top-style: dashed;
+}
+
+.chip-state {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.chip-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
 }
 
 .layers {

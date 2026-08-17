@@ -1,4 +1,17 @@
 <script setup lang="ts">
+/** 地圖上的吉祥物 icon 標點；有 title/lines 的話點下去會跳出詳細資訊 */
+interface IconMarker {
+  lat: number
+  lng: number
+  label?: string
+  /** 資訊視窗標題，沒給就用 label */
+  title?: string
+  /** 資訊視窗內容，一行一句；空字串會被略過 */
+  lines?: string[]
+  /** 標題旁的狀態標籤，例如「完全封閉」 */
+  status?: { text: string; tone: 'red' | 'grey' }
+}
+
 const props = withDefaults(
   defineProps<{
     height?: string
@@ -8,9 +21,15 @@ const props = withDefaults(
     showConstruction?: boolean
     showPark?: boolean
     routePolyline?: string
+    /** 拿來比較用的第二條路線（例如沒套用任何無障礙/施工考量的原始 Google 路線），用灰色虛線畫 */
+    comparePolyline?: string
     markers?: { x: number; y: number; label?: string; tone?: 'teal' | 'red' | 'green' }[]
+    /** 施工地點——勾 Safety 時用吉祥物 icon 標示（IMG_4703.png） */
+    constructionMarkers?: IconMarker[]
+    /** 輪行台北無障礙通行點——勾 Wheelchair 時用吉祥物 icon 標示（IMG_4704.png） */
+    facilityMarkers?: IconMarker[]
   }>(),
-  { height: '220px', showPark: true, markers: () => [] },
+  { height: '220px', showPark: true, markers: () => [], constructionMarkers: () => [], facilityMarkers: () => [] },
 )
 
 const config = useRuntimeConfig()
@@ -18,7 +37,12 @@ const mapElement = ref<HTMLElement>()
 const loadError = ref('')
 let map: any
 let routeLine: any
+let compareLine: any
 let currentMarker: any
+let constructionMarkerObjs: any[] = []
+let facilityMarkerObjs: any[] = []
+/** 全圖共用一個資訊視窗，點下一個標點時上一個會自動關掉 */
+let infoWindow: any
 
 declare global {
   interface Window {
@@ -48,7 +72,31 @@ function loadGoogleMaps() {
 function drawRoute(maps: any) {
   routeLine?.setMap(null)
   routeLine = null
+  compareLine?.setMap(null)
+  compareLine = null
   if (!map || !props.routePolyline) return
+
+  const bounds = new maps.LatLngBounds()
+
+  // 比較用的原始路線先畫，灰色虛線墊在下面，主路線蓋在上面才看得清楚
+  if (props.comparePolyline && props.comparePolyline !== props.routePolyline) {
+    const comparePath = maps.geometry.encoding.decodePath(props.comparePolyline)
+    compareLine = new maps.Polyline({
+      map,
+      path: comparePath,
+      strokeOpacity: 0,
+      icons: [
+        {
+          icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.9, scale: 3 },
+          offset: '0',
+          repeat: '14px',
+        },
+      ],
+      strokeColor: '#9a978d',
+      zIndex: 1,
+    })
+    comparePath.forEach((point: any) => bounds.extend(point))
+  }
 
   const path = maps.geometry.encoding.decodePath(props.routePolyline)
   routeLine = new maps.Polyline({
@@ -57,10 +105,76 @@ function drawRoute(maps: any) {
     strokeColor: '#0b5f5c',
     strokeOpacity: 1,
     strokeWeight: 6,
+    zIndex: 2,
   })
-  const bounds = new maps.LatLngBounds()
   path.forEach((point: any) => bounds.extend(point))
   map.fitBounds(bounds, 44)
+}
+
+/**
+ * 組出資訊視窗的內容。
+ * 一律用 DOM + textContent，不要用 HTML 字串——施工資料是外部開放資料，
+ * 路名/施工項目直接塞進 innerHTML 會有注入風險。
+ */
+function buildInfoContent(point: IconMarker) {
+  const box = document.createElement('div')
+  box.className = 'map-info'
+
+  const heading = document.createElement('div')
+  heading.className = 'map-info__head'
+  const title = document.createElement('strong')
+  title.textContent = point.title || point.label || '施工路段'
+  heading.appendChild(title)
+  if (point.status) {
+    const status = document.createElement('span')
+    status.className = `map-info__status map-info__status--${point.status.tone}`
+    status.textContent = point.status.text
+    heading.appendChild(status)
+  }
+  box.appendChild(heading)
+
+  for (const line of point.lines ?? []) {
+    if (!line) continue
+    const row = document.createElement('p')
+    row.className = 'map-info__line'
+    row.textContent = line
+    box.appendChild(row)
+  }
+  return box
+}
+
+/** 用同一隻吉祥物 icon（不同圖檔）畫一組定點 marker，畫之前先清掉上一批 */
+function drawIconMarkers(maps: any, existing: any[], points: IconMarker[], iconUrl: string) {
+  existing.forEach((m) => m.setMap(null))
+  existing.length = 0
+  // 上一批標點裡如果有開著的資訊視窗，標點都清掉了就不該再留著
+  infoWindow?.close()
+  if (!map) return
+  for (const point of points) {
+    const marker = new maps.Marker({
+      map,
+      position: { lat: point.lat, lng: point.lng },
+      title: point.label,
+      icon: { url: iconUrl, scaledSize: new maps.Size(36, 36), anchor: new maps.Point(18, 32) },
+    })
+    if (point.lines?.length || point.title) {
+      marker.addListener('click', () => {
+        infoWindow ??= new maps.InfoWindow({ maxWidth: 260 })
+        infoWindow.setContent(buildInfoContent(point))
+        infoWindow.open({ map, anchor: marker })
+      })
+    }
+    existing.push(marker)
+  }
+}
+
+// 檔名大小寫要跟 public/ 裡的實際檔案一致：macOS 不分大小寫，但部署到 Linux 會 404
+function drawConstructionMarkers(maps: any) {
+  drawIconMarkers(maps, constructionMarkerObjs, props.showConstruction ? props.constructionMarkers : [], '/IMG_4703.png')
+}
+
+function drawFacilityMarkers(maps: any) {
+  drawIconMarkers(maps, facilityMarkerObjs, props.facilityMarkers, '/IMG_4704.png')
 }
 
 function locateUser(maps: any) {
@@ -89,6 +203,8 @@ onMounted(async () => {
       clickableIcons: false,
     })
     drawRoute(maps)
+    drawConstructionMarkers(maps)
+    drawFacilityMarkers(maps)
     locateUser(maps)
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : 'Google Maps 載入失敗'
@@ -96,15 +212,33 @@ onMounted(async () => {
 })
 
 watch(
-  () => props.routePolyline,
+  [() => props.routePolyline, () => props.comparePolyline],
   async () => {
     if (map && window.google?.maps) drawRoute(window.google.maps)
   },
 )
 
+watch(
+  [() => props.constructionMarkers, () => props.showConstruction],
+  () => {
+    if (map && window.google?.maps) drawConstructionMarkers(window.google.maps)
+  },
+)
+
+watch(
+  () => props.facilityMarkers,
+  () => {
+    if (map && window.google?.maps) drawFacilityMarkers(window.google.maps)
+  },
+)
+
 onBeforeUnmount(() => {
   routeLine?.setMap(null)
+  compareLine?.setMap(null)
   currentMarker?.setMap(null)
+  infoWindow?.close()
+  constructionMarkerObjs.forEach((m) => m.setMap(null))
+  facilityMarkerObjs.forEach((m) => m.setMap(null))
 })
 </script>
 
@@ -160,5 +294,46 @@ onBeforeUnmount(() => {
 
 .map__overlay :deep(*) {
   pointer-events: auto;
+}
+</style>
+
+<!-- 資訊視窗的內容是 document.createElement 建出來的，不會帶 scoped 屬性，這段不能加 scoped -->
+<style>
+.map-info {
+  max-width: 240px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink, #2b2a26);
+}
+
+.map-info__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.map-info__status {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.map-info__status--red {
+  background: var(--red-soft, #fdeceb);
+  color: var(--red, #c0392b);
+}
+
+.map-info__status--grey {
+  background: #eeece6;
+  color: #6b675e;
+}
+
+.map-info__line {
+  margin: 2px 0;
+  color: var(--ink-soft, #6b675e);
 }
 </style>

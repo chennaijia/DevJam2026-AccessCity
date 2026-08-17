@@ -33,6 +33,7 @@ export default defineEventHandler(async (event) => {
     body: `${user.name} 按下了 SOS，請盡快聯絡`,
     url: `/caregiver/alerts/${alert.id}`,
     alertId: alert.id,
+    kind: 'emergency',
   })
 
   return alert

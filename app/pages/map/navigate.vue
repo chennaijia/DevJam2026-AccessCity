@@ -1,5 +1,6 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, origin } = usePlanning()
+const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, origin, showConstructionIcons } =
+  usePlanning()
 const { user } = useSession()
 
 // 直接進到導航頁（例如重新整理）時，補抓一次路線
@@ -24,6 +25,9 @@ const step = computed(() => steps.value[stepIndex.value])
 
 /** 目前這條路線撞到的施工路段（Navigation Agent 已在後端比對過） */
 const conflicts = computed(() => selectedRoute.value?.constructionConflicts ?? [])
+
+/** 導航時也在地圖上標出施工地點，開關沿用路線頁的設定（下方警示卡不受開關影響，那是安全資訊） */
+const constructionMarkers = computed(() => toConstructionMarkers(conflicts.value))
 
 function nextStep() {
   if (stepIndex.value < steps.value.length - 1) stepIndex.value++
@@ -76,7 +80,8 @@ async function endTrip() {
       height="100%"
       show-route
       :route-polyline="selectedRoute?.encodedPolyline"
-      :show-construction="!!conflicts.length"
+      :show-construction="showConstructionIcons && !!conflicts.length"
+      :construction-markers="constructionMarkers"
       class="nav-screen__bg"
       :markers="[{ x: 70, y: 18, label: '', tone: 'teal' }]"
     />
