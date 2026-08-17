@@ -155,13 +155,19 @@ export const api = {
     destination: string,
     needs: AccessNeed[] = [],
     todayNeeds: string[] = [],
+    origin?: { lat: number; lng: number } | null,
   ): Promise<RouteOption[]> {
     // TODO: 串接後端 —— GET /api/routes?destination=&needs=&today=
     //       後端負責呼叫 Google Routes API + 施工／無障礙資料，回傳排序後的路線。
     //       needs = 固定需求（輪椅/視障…），today = 今日需求（腳痠、想避開施工…）
     if (!USE_MOCK)
       return request<RouteOption[]>('/routes', {
-        query: { destination, needs: needs.join(','), today: todayNeeds.join(',') },
+        query: {
+          destination,
+          needs: needs.join(','),
+          today: todayNeeds.join(','),
+          ...(origin ? { originLat: origin.lat, originLng: origin.lng } : {}),
+        },
       })
     return mock(mockRoutes, 400)
   },

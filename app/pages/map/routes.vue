@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, todayNeeds } = usePlanning()
+const { destination, routes, selectedRouteId, todayNeeds, origin } = usePlanning()
 const { user } = useSession()
 
 if (!routes.value.length) {
@@ -8,6 +8,7 @@ if (!routes.value.length) {
     destination.value || '台大醫院',
     user.value?.needs ?? [],
     todayNeeds.value,
+    origin.value,
   )
 }
 selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
@@ -31,9 +32,10 @@ async function go() {
       :show-construction="routes.some((r) => r.constructionConflicts?.length)"
       class="map"
       :markers="[
-      { x: 16, y: 88, label: '', tone: 'teal' },
-      { x: 69, y: 20, label: '', tone: 'green' },
-    ]">
+        { x: 16, y: 88, label: '', tone: 'teal' },
+        { x: 69, y: 20, label: '', tone: 'green' },
+      ]"
+    >
       <div class="map__chips">
         <UiChip tone="plain"><AppIcon name="pin" :size="15" /> Current Location</UiChip>
         <button class="layers" aria-label="圖層"><AppIcon name="layers" :size="18" /></button>
@@ -55,7 +57,9 @@ async function go() {
         >
           <div class="row-between">
             <UiChip
-              :tone="r.badge === 'recommended' ? 'green' : r.badge === 'not-recommended' ? 'red' : 'grey'"
+              :tone="
+                r.badge === 'recommended' ? 'green' : r.badge === 'not-recommended' ? 'red' : 'grey'
+              "
             >
               {{ r.badgeLabel }}
             </UiChip>
@@ -64,7 +68,10 @@ async function go() {
 
           <div
             class="title-md"
-            :style="{ marginTop: '6px', color: r.badge === 'recommended' ? 'var(--teal)' : 'inherit' }"
+            :style="{
+              marginTop: '6px',
+              color: r.badge === 'recommended' ? 'var(--teal)' : 'inherit',
+            }"
           >
             {{ r.title }}
           </div>

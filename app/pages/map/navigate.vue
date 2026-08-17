@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, selectedRoute, todayNeeds } = usePlanning()
+const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, origin } = usePlanning()
 const { user } = useSession()
 
 // 直接進到導航頁（例如重新整理）時，補抓一次路線
@@ -9,6 +9,7 @@ if (!routes.value.length) {
     destination.value || '台大醫院',
     user.value?.needs ?? [],
     todayNeeds.value,
+    origin.value,
   )
   selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
 }
@@ -92,7 +93,12 @@ async function endTrip() {
 
     <div class="nav-screen__bottom">
       <!-- 施工提示：後端比對出來的路段直接講清楚 -->
-      <UiCard v-if="conflicts.length" variant="danger" padding="10px 14px" style="margin-bottom: 10px">
+      <UiCard
+        v-if="conflicts.length"
+        variant="danger"
+        padding="10px 14px"
+        style="margin-bottom: 10px"
+      >
         <div class="row" style="gap: 8px">
           <AppIcon name="warn" :size="18" />
           <div style="font-size: 14px; font-weight: 700">
@@ -102,7 +108,9 @@ async function endTrip() {
       </UiCard>
 
       <MimoBubble
-        :text="conflicts.length ? '前面有施工，我已經幫你避開了。' : 'The path ahead is clear and safe.'"
+        :text="
+          conflicts.length ? '前面有施工，我已經幫你避開了。' : 'The path ahead is clear and safe.'
+        "
       />
 
       <!-- 語音優先：大按鈕的重聽與求助 -->

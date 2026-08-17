@@ -1,82 +1,122 @@
-import type { RouteOption } from '#shared/types/accessity'
-import { db } from '../utils/store'
-import { findConflicts } from '../data/construction'
+import type { RouteOption, RouteStep } from '#shared/types/accessity'
 
-/**
- * Navigation Agent：回傳候選路線（企劃書 §4.4 施工感知導航）
- *
- * 目前的流程：
- *   1. 取候選路線（暫時來自 store，之後換成 Google Routes API 的 alternatives）
- *   2. 每條路線的路段 × 施工資料做交叉比對
- *   3. 撞到施工的降級為 not-recommended，沒撞到的依可達性排序
- *   4. 產生「為什麼推薦這條」的說明，帶入目的地、固定需求與今日需求
- *
- * TODO: 1 換成 Google Routes API（walking + alternatives），
- *       2 的比對換成 polyline 與施工 GeoJSON 的空間交集。
- */
-export default defineEventHandler((event) => {
-  const {
-    destination = '',
-    needs = '',
-    today = '',
-  } = getQuery(event) as { destination?: string; needs?: string; today?: string }
+interface GoogleRoute {
+  distanceMeters?: number
+  duration?: string
+  description?: string
+  polyline?: { encodedPolyline?: string }
+  legs?: Array<{
+    steps?: Array<{
+      distanceMeters?: number
+      navigationInstruction?: { instructions?: string }
+    }>
+  }>
+}
 
-  const needList = String(needs).split(',').filter(Boolean)
-  const todayList = String(today).split(',').filter(Boolean)
-  // 今日需求沒帶就沿用後端記住的那份
-  const activeToday = todayList.length ? todayList : db.todayNeeds
-  const avoidConstruction = activeToday.includes('avoid-construction')
+interface GoogleRoutesResponse {
+  routes?: GoogleRoute[]
+}
 
-  // 1 + 2：候選路線與施工資料比對
-  const scored = db.routes.map((route) => {
-    const conflicts = findConflicts(route.segments)
-    return { route, conflicts }
-  })
+function durationSeconds(duration = '0s') {
+  return Number(duration.replace(/s$/, '')) || 0
+}
 
-  // 3：撞到施工的往下排，其餘依無障礙分數排序
-  const ranked = [...scored].sort((a, b) => {
-    if (a.conflicts.length !== b.conflicts.length) return a.conflicts.length - b.conflicts.length
-    return (b.route.accessibilityScore ?? 0) - (a.route.accessibilityScore ?? 0)
-  })
+function toRouteOption(
+  route: GoogleRoute,
+  index: number,
+  hasAccessibilityNeed: boolean,
+): RouteOption {
+  const steps: RouteStep[] = (route.legs ?? []).flatMap((leg) =>
+    (leg.steps ?? []).map((step) => ({
+      instruction: step.navigationInstruction?.instructions || '繼續前進',
+      distanceMeters: step.distanceMeters ?? 0,
+    })),
+  )
+  const recommended = index === 0
 
-  const bestId = ranked[0]?.route.id
+  return {
+    id: `google-route-${index + 1}`,
+    title: recommended ? 'Google 建議路線' : route.description || `替代路線 ${index + 1}`,
+    badge: recommended ? 'recommended' : 'alternative',
+    badgeLabel: recommended ? 'RECOMMENDED' : 'ALTERNATIVE',
+    durationMinutes: Math.max(1, Math.ceil(durationSeconds(route.duration) / 60)),
+    distanceMeters: route.distanceMeters,
+    encodedPolyline: route.polyline?.encodedPolyline,
+    tags: hasAccessibilityNeed ? ['Walking route', '請留意現場無障礙設施'] : ['Walking route'],
+    reason: recommended ? '依 Google Routes API 的行人路線與預估時間推薦。' : undefined,
+    steps,
+  }
+}
 
-  const result: RouteOption[] = ranked.map(({ route, conflicts }) => {
-    const blocked = conflicts.length > 0
-    const isBest = route.id === bestId && !blocked
+export default defineEventHandler(async (event): Promise<RouteOption[]> => {
+  const query = getQuery(event) as Record<string, string | undefined>
+  const destination = query.destination?.trim()
+  if (!destination) throw createError({ statusCode: 400, statusMessage: '請提供目的地' })
 
-    // 4：說明文字
-    const parts: string[] = []
-    if (isBest) {
-      const avoided = scored
-        .flatMap((s) => s.conflicts)
-        .map((c) => c.road)
-        .filter((road, i, all) => all.indexOf(road) === i)
-      if (avoided.length) parts.push(`避開了${avoided.join('、')}的施工`)
-      if (route.tags.includes('Elevator')) parts.push('沿路電梯可用')
-      if (needList.includes('wheelchair')) parts.push('全程無台階')
-      if (activeToday.includes('tired') || activeToday.includes('short')) parts.push('步行距離較短')
-      if (activeToday.includes('rest')) parts.push('中途有休息點')
-      if (activeToday.includes('shade')) parts.push('大部分路段有遮蔭')
-    }
+  const config = useRuntimeConfig(event)
+  if (!config.googleRoutesApiKey) {
+    throw createError({ statusCode: 500, statusMessage: 'GOOGLE_ROUTES_API_KEY 未設定' })
+  }
 
-    return {
-      ...route,
-      badge: blocked ? 'not-recommended' : isBest ? 'recommended' : 'alternative',
-      badgeLabel: blocked ? 'NOT RECOMMENDED' : isBest ? 'RECOMMENDED' : 'ALTERNATIVE',
-      warning: blocked
-        ? `${conflicts.map((c) => c.road).join('、')} 施工中${
-            conflicts.some((c) => c.severity === 'blocked') ? '（人行道封閉）' : ''
-          }`
-        : route.warning,
-      constructionConflicts: conflicts,
-      reason: isBest
-        ? `為什麼推薦這條？${parts.join('，')}${destination ? `，直接到${destination}` : ''}。${
-            avoidConstruction ? '（你今天想避開施工）' : ''
-          }`
-        : undefined,
-    }
-  })
+  const lat = Number(query.originLat)
+  const lng = Number(query.originLng)
+  const hasCoordinates =
+    query.originLat !== undefined &&
+    query.originLng !== undefined &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng)
+  const fallbackOrigin = String(config.googleRoutesOrigin || '').trim()
+  if (!hasCoordinates && !fallbackOrigin) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: '無法取得起點，請允許定位或設定 GOOGLE_ROUTES_ORIGIN',
+    })
+  }
 
-  return result
+  const origin = hasCoordinates
+    ? { location: { latLng: { latitude: lat, longitude: lng } } }
+    : { address: fallbackOrigin }
+
+  try {
+    const response = await $fetch<GoogleRoutesResponse>(
+      'https://routes.googleapis.com/directions/v2:computeRoutes',
+      {
+        method: 'POST',
+        headers: {
+          'X-Goog-Api-Key': String(config.googleRoutesApiKey),
+          'X-Goog-FieldMask': [
+            'routes.distanceMeters',
+            'routes.duration',
+            'routes.description',
+            'routes.polyline.encodedPolyline',
+            'routes.legs.steps.distanceMeters',
+            'routes.legs.steps.navigationInstruction.instructions',
+          ].join(','),
+        },
+        body: {
+          origin,
+          destination: { address: destination },
+          travelMode: 'WALK',
+          computeAlternativeRoutes: false,
+          languageCode: 'zh-TW',
+          units: 'METRIC',
+        },
+      },
+    )
+
+    const routes = response.routes ?? []
+    if (!routes.length) throw createError({ statusCode: 404, statusMessage: '找不到可步行的路線' })
+
+    const needs = `${query.needs ?? ''},${query.today ?? ''}`
+    return routes.map((route, index) =>
+      toRouteOption(route, index, /wheelchair|mobility/.test(needs)),
+    )
+  } catch (error: any) {
+    if (error?.statusCode) throw error
+    console.error('[routes] Google Routes API 呼叫失敗：', error)
+    throw createError({
+      statusCode: error?.response?.status || 502,
+      statusMessage: error?.data?.error?.message || 'Google Routes API 暫時無法使用',
+    })
+  }
 })

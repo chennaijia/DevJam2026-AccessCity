@@ -80,10 +80,8 @@ export interface RouteOption {
   reason?: string
   accessibilityScore?: number
   safetyScore?: number
-  /** 這條路線會經過的路段，用來和施工資料做交叉比對 */
-  segments?: string[]
-  /** 比對後撞到的施工路段 */
-  constructionConflicts?: ConstructionZone[]
+  distanceMeters?: number
+  encodedPolyline?: string
   steps: RouteStep[]
 }
 
@@ -151,13 +149,7 @@ export interface WeeklyOverview {
 }
 
 /** 被照顧者端的通知（Check-in 詢問、照顧者回覆、路線調整、抵達…） */
-export type NotificationKind =
-  | 'check-in'
-  | 'caregiver'
-  | 'route'
-  | 'arrival'
-  | 'invite'
-  | 'system'
+export type NotificationKind = 'check-in' | 'caregiver' | 'route' | 'arrival' | 'invite' | 'system'
 
 export interface AppNotification {
   id: string
