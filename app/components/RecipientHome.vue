@@ -7,8 +7,7 @@ import type { AccessNeed, User } from '#shared/types/accessity'
 
 defineProps<{ user: User | null }>()
 
-const { destination, todayNeeds, toggleTodayNeed, planTo } = usePlanning()
-const { listen, listening, canListen } = useSpeech()
+const { todayNeeds, toggleTodayNeed, planTo } = usePlanning()
 
 // 一次平行取完首頁需要的資料（分開 await 會讓 SSR 等上好幾個 round trip）
 const { data: home } = await useAsyncData('recipient-home', async () => {
@@ -36,15 +35,6 @@ const needLabels: Record<AccessNeed, string> = {
   other: '其他需求',
 }
 
-/** 語音輸入：在首頁直接說目的地，聽到什麼就帶進規劃頁 */
-async function startVoice() {
-  if (!canListen()) {
-    destination.value = ''
-    return navigateTo('/map/plan')
-  }
-  const heard = await listen()
-  return planTo(heard)
-}
 </script>
 
 <template>
@@ -94,18 +84,6 @@ async function startVoice() {
 
     <!-- 現在位置的地圖：抓瀏覽器定位、標出目前位置 -->
     <MapCanvas height="180px" class="location-map" />
-
-    <!-- 主要行動：說出目的地 -->
-    <div class="stack-sm">
-      <button class="ask" type="button" @click="navigateTo('/map/plan')">
-        <AppIcon name="search" :size="20" />
-        <span>你今天想去哪裡？</span>
-      </button>
-      <UiButton @click="startVoice">
-        <AppIcon name="mic" :size="20" />
-        {{ listening ? '聽你說…' : '用說的告訴 Mimo' }}
-      </UiButton>
-    </div>
 
     <!-- 常用地點 -->
     <div class="label">常用地點</div>
@@ -223,25 +201,6 @@ async function startVoice() {
   color: var(--green-strong);
   font-size: 13px;
   font-weight: 600;
-}
-
-/* 大點擊區的搜尋入口 */
-.ask {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 56px;
-  padding: 14px 16px;
-  border-radius: var(--radius-btn);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-  color: var(--muted);
-  font-size: 16px;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
 }
 
 .places {
