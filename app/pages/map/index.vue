@@ -2,13 +2,15 @@
 const { destination, planTo, todayNeeds, toggleTodayNeed } = usePlanning()
 const { listen, listening, canListen } = useSpeech()
 
+// 常用地址：跟 /home、/settings/places 讀同一份資料，點了直接帶進 Requirement Agent
+const { data: savedPlaces } = await useAsyncData('map-home-places', () => api.getSavedPlaces())
+
 const filters = [
   { key: 'wheelchair', label: 'Wheelchair' },
-  { key: 'coolest', label: 'Coolest' },
   { key: 'safety', label: 'Safety' },
 ]
 // safety 對應到後端既有的 avoid-construction 需求 key（跟「今天想避開施工」是同一個判斷邏輯）
-const FILTER_TO_NEED: Record<string, string> = { wheelchair: 'wheelchair', coolest: 'coolest', safety: 'avoid-construction' }
+const FILTER_TO_NEED: Record<string, string> = { wheelchair: 'wheelchair', safety: 'avoid-construction' }
 const active = computed(() => filters.map((f) => f.key).filter((k) => todayNeeds.value.includes(FILTER_TO_NEED[k]!)))
 
 function toggleFilter(key: string) {
@@ -77,6 +79,19 @@ async function startPlanning() {
           @click="toggleFilter(f.key)"
         >
           {{ f.label }}
+        </UiChip>
+      </div>
+
+      <div v-if="savedPlaces?.length" class="row" style="flex-wrap: wrap">
+        <UiChip
+          v-for="p in savedPlaces"
+          :key="p.id"
+          as="button"
+          hard
+          @click="planTo(p.label === '回家' ? p.address : p.label)"
+        >
+          <AppIcon :name="p.icon" :size="14" />
+          {{ p.label }}
         </UiChip>
       </div>
     </div>

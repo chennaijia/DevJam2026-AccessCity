@@ -252,12 +252,11 @@ export function findSafetyWaypoints(assessment: RouteAssessment, encodedPolyline
 
 export interface RoutePreferences {
   wheelchair: boolean
-  coolest: boolean
   safety: boolean
 }
 
 /**
- * 依使用者選的 Wheelchair / Coolest / Safety 篩選器調整權重，決定哪條路線當 recommended。
+ * 依使用者選的 Wheelchair / Safety 篩選器調整權重，決定哪條路線當 recommended。
  * Distance/Time 30%、Accessibility 30%（Wheelchair 開啟時 50%）、
  * Construction Safety 20%（Safety 開啟時 40%）、Comfort 10%（目前無涼適點資料源，先給中性分數）。
  */
