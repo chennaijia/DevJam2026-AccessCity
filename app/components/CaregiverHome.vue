@@ -6,8 +6,15 @@ const { pending, load: loadAlerts } = useAlerts()
 await load()
 await loadAlerts()
 
-// TODO: 串接後端 —— GET /api/trips/overview（正式版改成帶 memberId 取個別統計）
+// TODO: 串接後端 —— GET /api/trips/overview、GET /api/trips/current（正式版帶 memberId）
 const { data: overview } = await useAsyncData('cg-overview', () => api.getWeeklyOverview())
+const { data: trip } = await useAsyncData('cg-trip', () => api.getCurrentTrip())
+
+/** 企劃書 §7：照顧者要看到的是一段 Journey，不是單純的 GPS 點位 */
+const onTrip = computed(() => trip.value?.status === 'on-trip')
+
+/** 這趟有沒有因為施工改道，地圖上要標出來 */
+const hasReroute = computed(() => !!trip.value?.events.some((e) => e.kind === 'reroute'))
 </script>
 
 <template>
@@ -69,15 +76,31 @@ const { data: overview } = await useAsyncData('cg-overview', () => api.getWeekly
 
       <UiCard variant="soft" padding="0" style="overflow: hidden">
         <div class="loc-head">
-          <span class="title-md">{{ selected?.name }}'s Location</span>
+          <div>
+            <span class="title-md">{{ selected?.name }}</span>
+            <span class="trip-state">{{ onTrip ? 'On trip' : 'Idle' }}</span>
+          </div>
           <UiChip :tone="selected?.status === 'safe' ? 'green' : 'yellow'">
             {{ selected?.statusLabel }}
           </UiChip>
         </div>
 
+        <!-- Destination / ETA：企劃書 Care Dashboard 的必要欄位 -->
+        <div v-if="onTrip" class="trip-strip">
+          <div>
+            <div class="muted">Destination</div>
+            <div style="font-weight: 700">{{ trip?.destination }}</div>
+          </div>
+          <div style="text-align: right">
+            <div class="muted">ETA</div>
+            <div style="font-weight: 700">{{ trip?.eta }}</div>
+          </div>
+        </div>
+
         <MapCanvas
           height="230px"
           show-route
+          :show-construction="hasReroute"
           :markers="[
             { x: 32, y: 44, label: '', tone: 'teal' },
             { x: 14, y: 82, label: '', tone: 'green' },
@@ -198,6 +221,22 @@ const { data: overview } = await useAsyncData('cg-overview', () => api.getWeekly
 }
 
 /* --- 位置卡 --- */
+.trip-state {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green-strong);
+}
+
+.trip-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
 .loc-head {
   display: flex;
   align-items: center;

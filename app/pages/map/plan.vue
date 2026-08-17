@@ -6,6 +6,7 @@
 const { destination, chips, routes, todayNeeds } = usePlanning()
 const { user } = useSession()
 const route = useRoute()
+const { listen, listening, canListen, speak } = useSpeech()
 
 // 目的地可從網址帶入（首頁常用地點 / 最近紀錄 / 重新整理都用得到）
 const initialDestination = (route.query.to as string) || destination.value
@@ -51,10 +52,18 @@ async function startNavigation() {
   await navigateTo('/map/routes')
 }
 
-function startVoice() {
-  // TODO: 串接語音輸入 —— Web Speech API（SpeechRecognition），辨識結果填進 text 後自動 parse
-  text.value = text.value || examples[0]!
-  return parse()
+/** 語音輸入：辨識到的整句話直接交給 Requirement Agent */
+async function startVoice() {
+  if (!canListen()) {
+    text.value = text.value || examples[0]!
+    return parse()
+  }
+  speak('請說出你想去哪裡，還有今天的身體狀況。', { force: true })
+  const heard = await listen()
+  if (heard) {
+    text.value = heard
+    await parse()
+  }
 }
 
 // 從首頁／常用地點帶著目的地進來的話，直接幫他解析好
@@ -67,7 +76,9 @@ if (initialDestination) await parse()
 
     <div>
       <h2 class="title-lg">你今天想去哪裡？</h2>
-      <p class="body">用一句話說明就好，Mimo 會幫你整理成導航條件。</p>
+      <p class="body">
+        {{ listening ? '聽你說…' : '用一句話說明就好，Mimo 會幫你整理成導航條件。' }}
+      </p>
     </div>
 
     <UiCard padding="14px 16px">
@@ -82,7 +93,12 @@ if (initialDestination) await parse()
         <UiButton :disabled="!text.trim() || loading" @click="parse">
           {{ loading ? 'Mimo 理解中…' : parsed ? '重新理解' : '讓 Mimo 理解' }}
         </UiButton>
-        <UiButton variant="outline" :block="false" aria-label="語音輸入" @click="startVoice">
+        <UiButton
+          variant="outline"
+          :block="false"
+          :aria-label="listening ? '聆聽中' : '語音輸入'"
+          @click="startVoice"
+        >
           <AppIcon name="mic" :size="20" />
         </UiButton>
       </div>

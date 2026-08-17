@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { destination, planTo } = usePlanning()
+const { listen, listening, canListen } = useSpeech()
 
 const filters = [
   { key: 'wheelchair', label: 'Wheelchair' },
@@ -14,10 +15,15 @@ function toggleFilter(key: string) {
     : [...active.value, key]
 }
 
-function startVoice() {
-  // TODO: 串接語音輸入 —— Web Speech API（SpeechRecognition）或後端 STT
-  //       取得文字後丟給 POST /api/agent/requirement
-  destination.value = destination.value || '台大醫院'
+/** 語音輸入：聽一句話 → 直接帶進 Requirement Agent */
+async function startVoice() {
+  if (!canListen()) {
+    // 瀏覽器不支援時降級成手動輸入
+    destination.value = destination.value || '台大醫院'
+    return
+  }
+  const heard = await listen()
+  if (heard) await planTo(heard)
 }
 
 async function startPlanning() {
@@ -28,14 +34,17 @@ async function startPlanning() {
 
 <template>
   <section class="screen screen--flush screen--nav map-home">
-    <MapCanvas height="100%" class="map-home__bg" :markers="[
-      { x: 30, y: 46, label: '', tone: 'teal' },
-      { x: 62, y: 34, label: '', tone: 'green' },
-    ]" />
+    <MapCanvas
+      height="100%"
+      class="map-home__bg"
+      :markers="[
+        { x: 30, y: 46, label: '', tone: 'teal' },
+        { x: 62, y: 34, label: '', tone: 'green' },
+      ]"
+    />
 
     <div class="map-home__top">
       <header class="row-between">
-        <button class="icon-btn" aria-label="選單"><AppIcon name="menu" :size="22" /></button>
         <h1 class="brand">Accessity</h1>
         <button class="icon-btn" aria-label="通知" @click="navigateTo('/notifications')">
           <AppIcon name="bell" :size="22" />
@@ -45,11 +54,18 @@ async function startPlanning() {
       <div class="search">
         <AppIcon name="search" :size="20" />
         <input v-model="destination" class="search__input" placeholder="Where to next?" />
-        <button class="icon-btn" aria-label="語音輸入" @click="startVoice">
+        <button
+          class="icon-btn"
+          :class="{ 'icon-btn--listening': listening }"
+          :aria-label="listening ? '聆聽中' : '語音輸入'"
+          @click="startVoice"
+        >
           <AppIcon name="mic" :size="20" />
         </button>
       </div>
-      <p class="muted" style="padding-left: 6px">Try "Find a ramp near the station."</p>
+      <p class="muted" style="padding-left: 6px">
+        {{ listening ? '聽你說…' : 'Try "Find a ramp near the station."' }}
+      </p>
 
       <div class="row" style="flex-wrap: wrap">
         <UiChip
@@ -121,6 +137,17 @@ async function startPlanning() {
   font-size: 16px;
   font-weight: 600;
   background: transparent;
+}
+
+.icon-btn--listening {
+  color: var(--red);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .icon-btn {

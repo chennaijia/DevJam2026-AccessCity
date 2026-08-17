@@ -99,6 +99,7 @@ export const mockRoutes: RouteOption[] = [
     durationMinutes: 12,
     tags: [],
     warning: 'Obstacles detected',
+    segments: ['Main St', '4th Ave'],
     steps: [],
   },
   {
@@ -112,6 +113,7 @@ export const mockRoutes: RouteOption[] = [
       'Why this route? Avoids the construction on Main St and uses the functional station elevator.',
     accessibilityScore: 96,
     safetyScore: 92,
+    segments: ['Oak Ave', 'Station Plaza'],
     steps: [
       { instruction: 'Turn right in 120m onto Main St', distanceMeters: 120, tag: 'Step-free' },
       { instruction: 'Continue 80m, then cross at the ramp', distanceMeters: 80, tag: 'Ramp' },
@@ -126,6 +128,7 @@ export const mockRoutes: RouteOption[] = [
     badgeLabel: 'ALTERNATIVE',
     durationMinutes: 19,
     tags: ['Shady', 'Less traffic'],
+    segments: ['Elm St', 'Park Lane'],
     steps: [],
   },
 ]

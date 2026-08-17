@@ -13,25 +13,54 @@ if (!routes.value.length) {
   selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
 }
 
+const { speak, replay, stopSpeaking, canSpeak } = useSpeech()
+
 const stepIndex = ref(0)
 const muted = ref(false)
 
 const steps = computed(() => selectedRoute.value?.steps ?? [])
 const step = computed(() => steps.value[stepIndex.value])
 
+/** 目前這條路線撞到的施工路段（Navigation Agent 已在後端比對過） */
+const conflicts = computed(() => selectedRoute.value?.constructionConflicts ?? [])
+
 function nextStep() {
   if (stepIndex.value < steps.value.length - 1) stepIndex.value++
   else navigateTo('/map/arrived')
 }
 
-/**
- * TODO: 串接語音導航 —— 用 Web Speech API 的 SpeechSynthesis 唸出 step.instruction，
- *       或改由後端回傳語音檔（TTS）。muted 時停止播報。
- */
-watch(step, (s) => {
-  if (!s || muted.value || !import.meta.client) return
-  // speechSynthesis.speak(new SpeechSynthesisUtterance(s.instruction))
+/** Voice-first：每個路口指示都自動播報，靜音時不出聲 */
+watch(
+  step,
+  (s) => {
+    if (!s || muted.value) return
+    speak(s.instruction)
+  },
+  { immediate: true },
+)
+
+watch(muted, (isMuted) => {
+  if (isMuted) stopSpeaking()
 })
+
+/** 開始導航時先講一次總覽（企劃書 Scene 2 的語音回覆） */
+onMounted(() => {
+  if (muted.value) return
+  const total = selectedRoute.value?.durationMinutes
+  const avoided = conflicts.value.length
+    ? '路上有施工，我已經幫你改走替代道路。'
+    : '這條路線目前沒有施工影響。'
+  speak(`已找到路線，約 ${total} 分鐘。${avoided}`, { force: true })
+})
+
+onBeforeUnmount(() => stopSpeaking())
+
+/** Help：直接叫出求助對話框（企劃書導航畫面的 Help Button） */
+const safety = ref<{ openSos: () => void } | null>(null)
+function askForHelp() {
+  speak('需要幫忙嗎？我可以幫你通知照顧者。', { force: true })
+  safety.value?.openSos()
+}
 
 async function endTrip() {
   // TODO: 串接後端 —— POST /api/trips/:id/end
@@ -42,9 +71,13 @@ async function endTrip() {
 
 <template>
   <section class="screen screen--flush nav-screen">
-    <MapCanvas height="100%" show-route class="nav-screen__bg" :markers="[
-      { x: 70, y: 18, label: '', tone: 'teal' },
-    ]" />
+    <MapCanvas
+      height="100%"
+      show-route
+      :show-construction="!!conflicts.length"
+      class="nav-screen__bg"
+      :markers="[{ x: 70, y: 18, label: '', tone: 'teal' }]"
+    />
 
     <div class="nav-screen__top">
       <div class="instruction" @click="nextStep">
@@ -58,7 +91,31 @@ async function endTrip() {
     </div>
 
     <div class="nav-screen__bottom">
-      <MimoBubble text="The path ahead is clear and safe." />
+      <!-- 施工提示：後端比對出來的路段直接講清楚 -->
+      <UiCard v-if="conflicts.length" variant="danger" padding="10px 14px" style="margin-bottom: 10px">
+        <div class="row" style="gap: 8px">
+          <AppIcon name="warn" :size="18" />
+          <div style="font-size: 14px; font-weight: 700">
+            {{ conflicts.map((c) => c.section).join('、') }} 施工至 {{ conflicts[0]?.until }}
+          </div>
+        </div>
+      </UiCard>
+
+      <MimoBubble
+        :text="conflicts.length ? '前面有施工，我已經幫你避開了。' : 'The path ahead is clear and safe.'"
+      />
+
+      <!-- 語音優先：大按鈕的重聽與求助 -->
+      <div class="row" style="margin-top: 12px">
+        <UiButton variant="outline" pill :disabled="!canSpeak()" @click="replay">
+          <AppIcon name="sound" :size="17" />
+          再聽一次
+        </UiButton>
+        <UiButton variant="green" pill @click="askForHelp">
+          <AppIcon name="info" :size="17" />
+          需要協助
+        </UiButton>
+      </div>
 
       <div class="row" style="margin-top: 12px">
         <UiButton variant="ghost" pill @click="navigateTo('/report')">
@@ -75,7 +132,7 @@ async function endTrip() {
       </div>
     </div>
 
-    <SafetyOverlay demo />
+    <SafetyOverlay ref="safety" demo :bottom="conflicts.length ? 300 : 250" />
   </section>
 </template>
 

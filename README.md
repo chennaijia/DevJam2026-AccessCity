@@ -112,6 +112,24 @@ async getRoutes(destination, needs) {
 - `USE_MOCK = false`：改打 `server/api/**` 的真實 endpoint（已經全部實作好，介面一致）。
 - 需要 token / 錯誤處理時，改 `useApi.ts` 裡的 `request()` 一處即可。
 
+### 企劃書對照
+
+| 企劃書項目 | 現況 |
+| --- | --- |
+| §4.1 AI 需求輸入（文字／語音／快捷） | ✅ Gemini Requirement Agent + Web Speech 語音輸入 + 範例句 |
+| §4.2 固定需求 / 今日需求 | ✅ 帳號上的固定需求 + 首頁的今日狀況（當天有效） |
+| §4.3 Google Maps 導航 | ⚠️ 尚未串接（缺 API key），目前是 `MapCanvas` 示意底圖 |
+| §4.4 施工感知導航 | ✅ 後端 `routes.get.ts` 用施工資料做路段比對、重新排序並產生推薦理由 |
+| §4.5 Voice-first | ✅ TTS 逐步播報 + Replay（再聽一次）+ Help（需要協助）+ 大按鈕 |
+| §4.6 Care Dashboard | ✅ On trip / Destination / ETA / 即時位置 / Trip Timeline（成員詳情） |
+| §4.7 Detect → Ask → Wait → Escalate | ✅ 停留詢問 + 倒數等待 + 逾時自動升級 Care Alert |
+| §5 三個 Agent | ✅ Requirement（Gemini）／Navigation（施工比對）／Care（Check-in 升級） |
+| §6 被照顧者 Home / 導航畫面 | ✅ 現在位置、常用地點、已儲存需求、最近行程、施工標示 |
+| §7 照顧者 Dashboard | ✅ 提醒中心、成員切換、即時位置、統計 |
+
+剩下最大的一項是 **Google Maps 串接**：`nuxt.config.ts` 已留 `googleMapsKey`，
+把 `MapCanvas` 換成 Google Maps JS API、路線改用 Routes API 的 polyline 即可。
+
 其他 `TODO` 標註的整合點：
 
 - **Google Maps**：`app/components/MapCanvas.vue`（目前是 CSS + SVG 示意底圖）、`nuxt.config.ts` 的 `googleMapsKey`。
@@ -140,6 +158,7 @@ async getRoutes(destination, needs) {
 | PATCH  | `/api/members/:id`                | 停留提醒分鐘數、通知開關         |
 | POST   | `/api/agent/requirement`          | Requirement Agent：自然語言 → 需求 chips |
 | GET    | `/api/routes`                     | 候選路線（含推薦理由與評分）     |
+| GET    | `/api/construction`               | 城市施工路段                     |
 | GET    | `/api/shelters`                   | 避難所可達性                     |
 | GET    | `/api/places`                     | 常用地點（首頁一鍵導航）         |
 | GET    | `/api/needs/today`                | 今日需求選項                     |
@@ -152,7 +171,7 @@ async getRoutes(destination, needs) {
 | GET    | `/api/alerts`                     | 提醒列表                         |
 | POST   | `/api/alerts/sos`                 | 送出 SOS                         |
 | POST   | `/api/alerts/:id/respond`         | 照顧者回覆（正在前往 / 已收到）  |
-| POST   | `/api/checkin`                    | Check-in 回覆（I'm OK / 需要幫忙）|
+| POST   | `/api/checkin`                    | Check-in 回覆（ok / need-help / no-response 逾時升級）|
 | POST   | `/api/reports`                    | 路況回報                         |
 | GET    | `/api/notifications`              | 通知清單                         |
 | POST   | `/api/notifications/:id/read`     | 標記單則已讀                     |

@@ -25,7 +25,12 @@ async function go() {
       <ScreenHeader title="Accessity" back="/map/plan" />
     </div>
 
-    <MapCanvas height="270px" show-route class="map" :markers="[
+    <MapCanvas
+      height="270px"
+      show-route
+      :show-construction="routes.some((r) => r.constructionConflicts?.length)"
+      class="map"
+      :markers="[
       { x: 16, y: 88, label: '', tone: 'teal' },
       { x: 69, y: 20, label: '', tone: 'green' },
     ]">
@@ -68,6 +73,13 @@ async function go() {
             <AppIcon name="warn" :size="15" />
             {{ r.warning }}
           </p>
+
+          <!-- 後端比對出來的施工路段細節 -->
+          <div v-if="r.constructionConflicts?.length" class="conflicts">
+            <div v-for="c in r.constructionConflicts" :key="c.id">
+              {{ c.section }}：{{ c.note }}（至 {{ c.until }}）
+            </div>
+          </div>
 
           <div v-if="r.tags.length" class="row" style="flex-wrap: wrap; margin-top: 8px">
             <UiChip v-for="t in r.tags" :key="t" tone="grey">{{ t }}</UiChip>
@@ -147,6 +159,13 @@ async function go() {
   font-size: 14px;
   font-weight: 700;
   margin-top: 6px;
+}
+
+.conflicts {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.5;
 }
 
 .reason {

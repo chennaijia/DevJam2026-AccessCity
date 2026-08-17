@@ -8,6 +8,7 @@ import type { AccessNeed, User } from '#shared/types/accessity'
 defineProps<{ user: User | null }>()
 
 const { destination, todayNeeds, toggleTodayNeed, planTo } = usePlanning()
+const { listen, listening, canListen } = useSpeech()
 
 // TODO: 串接後端 —— GET /api/places、GET /api/needs/today、GET /api/trips/recent、GET /api/trips/current
 const { data: places } = await useAsyncData('home-places', () => api.getSavedPlaces())
@@ -24,10 +25,14 @@ const needLabels: Record<AccessNeed, string> = {
   other: '其他需求',
 }
 
-function startVoice() {
-  // TODO: 串接語音輸入 —— Web Speech API（SpeechRecognition）；辨識完的文字直接進 /map/plan
-  destination.value = ''
-  return navigateTo('/map/plan')
+/** 語音輸入：在首頁直接說目的地，聽到什麼就帶進規劃頁 */
+async function startVoice() {
+  if (!canListen()) {
+    destination.value = ''
+    return navigateTo('/map/plan')
+  }
+  const heard = await listen()
+  return planTo(heard)
 }
 </script>
 
@@ -84,7 +89,7 @@ function startVoice() {
       </button>
       <UiButton @click="startVoice">
         <AppIcon name="mic" :size="20" />
-        用說的告訴 Mimo
+        {{ listening ? '聽你說…' : '用說的告訴 Mimo' }}
       </UiButton>
     </div>
 

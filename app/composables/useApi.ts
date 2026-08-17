@@ -12,6 +12,7 @@ import type {
   AccessNeed,
   ApiOk,
   AppNotification,
+  ConstructionZone,
   CareAlert,
   Family,
   Member,
@@ -165,6 +166,12 @@ export const api = {
     return mock(mockRoutes, 400)
   },
 
+  async getConstruction(): Promise<ConstructionZone[]> {
+    // TODO: 串接後端 —— GET /api/construction（城市施工開放資料）
+    if (!USE_MOCK) return request<ConstructionZone[]>('/construction')
+    return mock([])
+  },
+
   async getShelters(): Promise<Shelter[]> {
     // TODO: 串接後端 —— GET /api/shelters（避難所 / 可達性比較）
     if (!USE_MOCK) return request<Shelter[]>('/shelters')
@@ -244,9 +251,9 @@ export const api = {
     return mock({ ok: true } as ApiOk)
   },
 
-  async checkIn(answer: 'ok' | 'need-help'): Promise<ApiOk> {
+  async checkIn(answer: 'ok' | 'need-help' | 'no-response'): Promise<ApiOk> {
     // TODO: 串接後端 —— POST /api/checkin { answer }
-    //       answer = 'need-help' 時後端要立刻通知照顧者
+    //       answer = 'need-help' 或 'no-response'（逾時未回覆）時，後端會升級為 Care Alert
     if (!USE_MOCK) return request('/checkin', { method: 'POST', body: { answer } })
     return mock({ ok: true } as ApiOk)
   },

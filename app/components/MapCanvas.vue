@@ -10,6 +10,8 @@ withDefaults(
     height?: string
     showRoute?: boolean
     showFlood?: boolean
+    /** 施工路段標示（企劃書 §6 導航畫面的「施工區塊」） */
+    showConstruction?: boolean
     showPark?: boolean
     markers?: { x: number; y: number; label?: string; tone?: 'teal' | 'red' | 'green' }[]
   }>(),
@@ -60,6 +62,10 @@ withDefaults(
         stroke-linejoin="round"
       />
     </svg>
+
+    <div v-if="showConstruction" class="map__construction" aria-hidden="true">
+      <span class="map__construction-tag">施工</span>
+    </div>
 
     <span
       v-for="(m, i) in markers"
@@ -142,6 +148,36 @@ withDefaults(
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+.map__construction {
+  position: absolute;
+  left: 40%;
+  top: 30%;
+  width: 30%;
+  height: 12px;
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+    45deg,
+    #ef9f5c,
+    #ef9f5c 6px,
+    #f7d3ae 6px,
+    #f7d3ae 12px
+  );
+  display: grid;
+  place-items: center;
+}
+
+.map__construction-tag {
+  position: absolute;
+  top: -22px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: #3a2c00;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .map__marker {

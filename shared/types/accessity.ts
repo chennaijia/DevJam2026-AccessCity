@@ -59,6 +59,16 @@ export interface RouteStep {
   tag?: string
 }
 
+/** 施工／封路資訊（城市開放資料的簡化版） */
+export interface ConstructionZone {
+  id: string
+  road: string
+  section: string
+  until: string
+  severity: 'blocked' | 'narrowed'
+  note: string
+}
+
 export interface RouteOption {
   id: string
   title: string
@@ -70,6 +80,10 @@ export interface RouteOption {
   reason?: string
   accessibilityScore?: number
   safetyScore?: number
+  /** 這條路線會經過的路段，用來和施工資料做交叉比對 */
+  segments?: string[]
+  /** 比對後撞到的施工路段 */
+  constructionConflicts?: ConstructionZone[]
   steps: RouteStep[]
 }
 
