@@ -114,12 +114,12 @@ export function useEmergencyAlert() {
 
   /* --------------------------------------------------------- 使用者回應 */
 
-  async function acknowledge(action: 'responding' | 'received') {
+  function acknowledge(action: 'responding' | 'received') {
     const alert = current.value
     if (!alert) return
     stopBuzzing()
     current.value = null
-    await respond(alert.id, action)
+    respond(alert.id, action)
   }
 
   /** 稍後處理：關掉彈窗但保留未處理狀態，提醒中心還看得到 */

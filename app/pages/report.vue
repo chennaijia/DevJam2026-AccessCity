@@ -10,12 +10,19 @@ const type = ref('construction')
 const note = ref('')
 const done = ref(false)
 
-async function submit() {
+function submit() {
   // TODO: 串接後端 —— POST /api/reports { type, note, lat, lng, photo }
   //       群眾回報之後會餵回路線評分（企劃書 Future Work：群眾回報）
-  await api.reportIssue({ type: type.value, note: note.value })
+  const payload = { type: type.value, note: note.value }
   done.value = true
   note.value = ''
+  runInBackground(api.reportIssue(payload), {
+    label: 'report:submit',
+    onError: () => {
+      done.value = false
+      note.value = payload.note
+    },
+  })
 }
 </script>
 

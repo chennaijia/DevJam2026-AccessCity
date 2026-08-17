@@ -23,10 +23,13 @@ export function useAlerts() {
     return alerts.value.find((a) => a.id === id)
   }
 
-  async function respond(id: string, action: 'responding' | 'received') {
-    // TODO: 串接後端 —— POST /api/alerts/:id/respond { action }
-    await api.respondAlert(id, action)
+  function respond(id: string, action: 'responding' | 'received') {
+    const previous = alerts.value
     alerts.value = alerts.value.map((a) => (a.id === id ? { ...a, acknowledged: true } : a))
+    runInBackground(api.respondAlert(id, action), {
+      label: 'alerts:respond',
+      onError: () => (alerts.value = previous),
+    })
   }
 
   return { alerts, pending, load, byId, respond }

@@ -12,6 +12,8 @@ export function usePlanning() {
   // 預設帶 wheelchair，對應首頁 Wheelchair 篩選器原本就預設勾選的樣子
   const todayNeeds = useState<string[]>('accessity:today-needs', () => ['wheelchair'])
   const origin = useState<{ lat: number; lng: number } | null>('accessity:route-origin', () => null)
+  /** 使用者明確講出來的出發點（例如「從政大到動物園」的「政大」），有值就取代目前定位當起點 */
+  const originPlace = useState<string>('accessity:origin-place', () => '')
   /** 測試用：開了就不送帳號設定裡的固定 needs（例如輪椅），只送這次對話解析出的 chips，方便單獨測某一項 */
   const ignoreProfileNeeds = useState<boolean>('accessity:ignore-profile-needs', () => false)
   /**
@@ -27,8 +29,10 @@ export function usePlanning() {
     () => routes.value.find((r) => r.id === selectedRouteId.value) ?? routes.value[1] ?? routes.value[0],
   )
 
-  /** Mimo 解析出的 chips（除了 destination）要一起送進 /api/routes，不然「避開施工」之類的需求永遠到不了後端 */
-  const chipNeeds = computed(() => chips.value.map((c) => c.key).filter((k) => k !== 'destination'))
+  /** Mimo 解析出的 chips（除了 destination/origin，那兩個是分開處理的）要一起送進 /api/routes */
+  const chipNeeds = computed(() =>
+    chips.value.map((c) => c.key).filter((k) => k !== 'destination' && k !== 'origin'),
+  )
 
   function toggleTodayNeed(key: string) {
     todayNeeds.value = todayNeeds.value.includes(key)
@@ -77,6 +81,7 @@ export function usePlanning() {
 
   function reset() {
     destination.value = ''
+    originPlace.value = ''
     chips.value = []
     routes.value = []
     selectedRouteId.value = ''
@@ -104,6 +109,7 @@ export function usePlanning() {
     selectedRoute,
     todayNeeds,
     origin,
+    originPlace,
     ignoreProfileNeeds,
     showConstructionIcons,
     planTrace,

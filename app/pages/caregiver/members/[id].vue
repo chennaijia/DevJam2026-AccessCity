@@ -24,21 +24,33 @@ const notifications = reactive({
 
 const saved = ref(false)
 let savedTimer: ReturnType<typeof setTimeout> | undefined
+let syncTimer: ReturnType<typeof setTimeout> | undefined
 
 // PATCH /api/members/:id（停留提醒門檻與通知開關）—— 自動儲存並給使用者回饋
 watch(
   [stayMinutes, notifications],
-  async () => {
-    await api.updateMemberSettings(id, {
-      stayAlertMinutes: stayMinutes.value,
-      notifications: { ...notifications },
-    })
+  () => {
     saved.value = true
     clearTimeout(savedTimer)
     savedTimer = setTimeout(() => (saved.value = false), 1800)
+    clearTimeout(syncTimer)
+    syncTimer = setTimeout(() => {
+      runInBackground(
+        api.updateMemberSettings(id, {
+          stayAlertMinutes: stayMinutes.value,
+          notifications: { ...notifications },
+        }),
+        { label: 'member-settings:update' },
+      )
+    }, 300)
   },
   { deep: true },
 )
+
+onBeforeUnmount(() => {
+  clearTimeout(savedTimer)
+  clearTimeout(syncTimer)
+})
 
 const { pending, load: loadAlerts } = useAlerts()
 await loadAlerts()

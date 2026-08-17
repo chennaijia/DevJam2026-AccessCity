@@ -17,9 +17,9 @@ const iconOf: Record<NotificationKind, string> = {
   system: 'info',
 }
 
-async function open(id: string, to?: string) {
-  await markRead(id)
-  if (to) await navigateTo(to)
+function open(id: string, to?: string) {
+  markRead(id)
+  if (to) return navigateTo(to)
 }
 </script>
 

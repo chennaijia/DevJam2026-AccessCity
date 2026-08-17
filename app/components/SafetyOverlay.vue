@@ -33,13 +33,16 @@ function showToast(text: string) {
   setTimeout(() => (toast.value = ''), 2600)
 }
 
-async function sendSos() {
+function sendSos() {
   if (import.meta.client) navigator.vibrate?.([100, 50, 100])
   // POST /api/alerts/sos —— 後端會立刻建立 Care Alert 通知照顧者
-  await api.sendSos()
   sosOpen.value = false
   showToast('已通知照顧者，請待在原地')
   speak('已經通知你的照顧者，請待在原地等一下。', { force: true })
+  runInBackground(api.sendSos(), {
+    label: 'safety:sos',
+    onError: () => showToast('通知傳送失敗，請再試一次'),
+  })
 }
 
 function openSos() {
@@ -68,22 +71,27 @@ function stopWaiting() {
 }
 
 /** Escalate：等待逾時仍未回覆 → 升級為 Care Alert */
-async function escalate() {
+function escalate() {
   stopWaiting()
   checkinOpen.value = false
   // POST /api/checkin { answer: 'no-response' } —— 後端建立 Care Alert
-  await api.checkIn('no-response')
   showToast('沒有收到回覆，已通知照顧者')
   speak('我沒有收到你的回覆，已經通知你的照顧者。', { force: true })
+  runInBackground(api.checkIn('no-response'), {
+    label: 'safety:no-response',
+    onError: () => showToast('通知傳送失敗，請再試一次'),
+  })
 }
 
-async function answerCheckin(answer: 'ok' | 'need-help') {
+function answerCheckin(answer: 'ok' | 'need-help') {
   stopWaiting()
-  // POST /api/checkin —— 'ok' 不打擾照顧者；'need-help' 立即升級為 Care Alert
-  await api.checkIn(answer)
   checkinOpen.value = false
   showToast(answer === 'ok' ? '好的，我會繼續陪著你' : '已通知照顧者')
   speak(answer === 'ok' ? '好的，我會繼續陪著你。' : '已經通知你的照顧者了。', { force: true })
+  runInBackground(api.checkIn(answer), {
+    label: 'safety:check-in',
+    onError: () => showToast('狀態同步失敗，請再試一次'),
+  })
 }
 
 /**

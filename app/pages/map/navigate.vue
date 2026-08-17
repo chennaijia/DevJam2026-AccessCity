@@ -72,10 +72,10 @@ function askForHelp() {
   safety.value?.openSos()
 }
 
-async function endTrip() {
+function endTrip() {
   // TODO: 串接後端 —— POST /api/trips/:id/end
-  await api.endTrip('t_1')
-  await navigateTo('/map')
+  runInBackground(api.endTrip('t_1'), { label: 'trip:end' })
+  return navigateTo('/map')
 }
 </script>
 

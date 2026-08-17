@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { SavedPlace } from '#shared/types/accessity'
 
-const { data: places, refresh } = await useAsyncData('settings-places', () => api.getSavedPlaces())
+const { data: places } = await useAsyncData('settings-places', () => api.getSavedPlaces())
 
 const ICONS: SavedPlace['icon'][] = ['house', 'pin', 'walk', 'shield']
 
 const showForm = ref(false)
 const editingId = ref<string | null>(null)
-const saving = ref(false)
+const error = ref('')
 const form = reactive<{ label: string; address: string; icon: SavedPlace['icon'] }>({
   label: '',
   address: '',
@@ -35,26 +35,54 @@ function cancelForm() {
   editingId.value = null
 }
 
-async function save() {
+function save() {
   if (!form.label.trim() || !form.address.trim()) return
-  saving.value = true
-  try {
-    if (editingId.value) {
-      await api.updateSavedPlace(editingId.value, { ...form })
-    } else {
-      await api.addSavedPlace({ ...form })
-    }
-    await refresh()
-    cancelForm()
-  } finally {
-    saving.value = false
+  const previous = [...(places.value ?? [])]
+  const payload = { ...form }
+  error.value = ''
+
+  if (editingId.value) {
+    const id = editingId.value
+    places.value = previous.map((place) => (place.id === id ? { ...place, ...payload } : place))
+    runInBackground(api.updateSavedPlace(id, payload), {
+      label: 'places:update',
+      onError: () => {
+        places.value = previous
+        error.value = '地址儲存失敗，請再試一次'
+      },
+    })
+  } else {
+    const temporaryId = `pending-${Date.now()}`
+    places.value = [...previous, { id: temporaryId, ...payload }]
+    runInBackground(
+      api.addSavedPlace(payload).then((saved) => {
+        places.value = (places.value ?? []).map((place) =>
+          place.id === temporaryId ? saved : place,
+        )
+      }),
+      {
+        label: 'places:add',
+        onError: () => {
+          places.value = (places.value ?? []).filter((place) => place.id !== temporaryId)
+          error.value = '地址新增失敗，請再試一次'
+        },
+      },
+    )
   }
+  cancelForm()
 }
 
-async function remove(place: SavedPlace) {
-  await api.deleteSavedPlace(place.id)
-  await refresh()
+function remove(place: SavedPlace) {
+  const previous = [...(places.value ?? [])]
+  places.value = previous.filter((item) => item.id !== place.id)
   if (editingId.value === place.id) cancelForm()
+  runInBackground(api.deleteSavedPlace(place.id), {
+    label: 'places:delete',
+    onError: () => {
+      places.value = previous
+      error.value = '地址刪除失敗，請再試一次'
+    },
+  })
 }
 </script>
 
@@ -63,6 +91,7 @@ async function remove(place: SavedPlace) {
     <ScreenHeader title="常用地址" back="/profile" />
 
     <p class="body">儲存常用的地址，下次導航時可以快速選取，不用每次重新輸入。</p>
+    <p v-if="error" class="body" style="color: var(--red)">{{ error }}</p>
 
     <div class="label">已儲存的地址</div>
     <div class="stack">
@@ -99,8 +128,8 @@ async function remove(place: SavedPlace) {
         </UiChip>
       </div>
       <div class="row">
-        <UiButton :disabled="!form.label.trim() || !form.address.trim() || saving" @click="save">
-          {{ saving ? '儲存中…' : '儲存' }}
+        <UiButton :disabled="!form.label.trim() || !form.address.trim()" @click="save">
+          儲存
         </UiButton>
         <UiButton variant="outline" :block="false" @click="cancelForm">取消</UiButton>
       </div>

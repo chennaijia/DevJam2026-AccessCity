@@ -18,16 +18,22 @@ export function useNotifications() {
 
   const unread = computed(() => items.value.filter((n) => !n.read))
 
-  async function markRead(id: string) {
-    // TODO: 串接後端 —— POST /api/notifications/:id/read
-    await api.markNotificationRead(id)
+  function markRead(id: string) {
+    const previous = items.value
     items.value = items.value.map((n) => (n.id === id ? { ...n, read: true } : n))
+    runInBackground(api.markNotificationRead(id), {
+      label: 'notifications:mark-read',
+      onError: () => (items.value = previous),
+    })
   }
 
-  async function markAllRead() {
-    // TODO: 串接後端 —— POST /api/notifications/read-all
-    await api.markAllNotificationsRead()
+  function markAllRead() {
+    const previous = items.value
     items.value = items.value.map((n) => ({ ...n, read: true }))
+    runInBackground(api.markAllNotificationsRead(), {
+      label: 'notifications:mark-all-read',
+      onError: () => (items.value = previous),
+    })
   }
 
   return { items, unread, load, markRead, markAllRead }

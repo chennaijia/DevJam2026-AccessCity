@@ -3,6 +3,7 @@
  * AI Requirement Confirmation（企劃書 §6）
  * 使用者說一句話 → Requirement Agent 拆成 chips → 確認後才開始規劃路線。
  */
+<<<<<<< HEAD
 const {
   destination,
   chips,
@@ -15,6 +16,10 @@ const {
   planning,
   planTrace,
 } = usePlanning()
+=======
+const { destination, chips, chipNeeds, routes, todayNeeds, ignoreProfileNeeds, originPlace, resolveOrigin } =
+  usePlanning()
+>>>>>>> f9e1a2bde81a5faf89a12e6c30831c9dcdaa29f0
 const { user } = useSession()
 const route = useRoute()
 const { listen, listening, canListen, speak } = useSpeech()
@@ -45,6 +50,9 @@ const todayChips = computed(() =>
 /** 有沒有真的解析出「目的地」，不是隨便把整句話當地點 */
 const hasDestination = computed(() => chips.value.some((c) => c.key === 'destination' && c.label.trim()))
 
+/** origin 用下面獨立的欄位顯示/編輯，不要在需求 chips 裡重複出現一次 */
+const displayChips = computed(() => chips.value.filter((c) => c.key !== 'origin'))
+
 async function parse() {
   if (!text.value.trim()) return
   loading.value = true
@@ -55,6 +63,9 @@ async function parse() {
     // 沒解析出目的地就不要硬把整句話當成地點——不然「輪椅」這種沒提到地點的話會被拿去查地址
     const destinationChip = chips.value.find((c) => c.key === 'destination')?.label
     if (destinationChip) destination.value = destinationChip
+    // 有明確講出發點（「從政大到動物園」）才覆蓋——沒講的話不要清掉，可能是使用者自己在下面的欄位打的
+    const originChip = chips.value.find((c) => c.key === 'origin')?.label
+    if (originChip) originPlace.value = originChip
     parsed.value = true
   } finally {
     loading.value = false
@@ -63,6 +74,7 @@ async function parse() {
 
 function removeChip(key: string) {
   chips.value = chips.value.filter((c) => c.key !== key)
+  if (key === 'origin') originPlace.value = ''
 }
 
 async function startNavigation() {
@@ -74,6 +86,7 @@ async function startNavigation() {
   navError.value = ''
   navigating.value = true
   try {
+<<<<<<< HEAD
     const origin = await resolveOrigin()
     await runPlanning({
       destination: destination.value,
@@ -83,6 +96,19 @@ async function startNavigation() {
 
     // 結果回來後先停一下，讓過程面板上的真實數字（幾個通行點、幾處施工）看得到再跳頁
     await new Promise((resolve) => setTimeout(resolve, 1200))
+=======
+    // TODO: 串接後端 —— GET /api/routes?destination=&needs=&today=
+    // 有明確講出發點就不用等定位（也不受定位失敗影響）
+    const origin = originPlace.value ? null : await resolveOrigin()
+    routes.value = await api.getRoutes(
+      destination.value,
+      ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
+      [...todayNeeds.value, ...chipNeeds.value],
+      origin,
+      null,
+      originPlace.value || undefined,
+    )
+>>>>>>> f9e1a2bde81a5faf89a12e6c30831c9dcdaa29f0
     await navigateTo('/map/routes')
   } catch {
     navError.value = '找不到這個地點的路線，麻煩換個講法或確認地點名稱。'
@@ -136,6 +162,15 @@ if (initialDestination) await parse()
     </UiCard>
 
     <UiCard padding="14px 16px">
+      <div class="origin-row">
+        <AppIcon name="pin" :size="16" />
+        <input
+          v-model="originPlace"
+          class="origin-input"
+          placeholder="出發點（留空 = 使用目前定位）"
+          aria-label="輸入出發點"
+        />
+      </div>
       <textarea
         v-model="text"
         class="need-input"
@@ -171,7 +206,7 @@ if (initialDestination) await parse()
     <template v-else>
       <div class="label">AI 解析出的需求</div>
       <div class="row" style="flex-wrap: wrap">
-        <UiChip v-for="c in chips" :key="c.key" tone="green" as="button" @click="removeChip(c.key)">
+        <UiChip v-for="c in displayChips" :key="c.key" tone="green" as="button" @click="removeChip(c.key)">
           {{ c.label }} ✕
         </UiChip>
       </div>
@@ -202,6 +237,26 @@ if (initialDestination) await parse()
 </template>
 
 <style scoped>
+.origin-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.origin-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--ink);
+}
+
 .need-input {
   width: 100%;
   border: none;

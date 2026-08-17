@@ -138,13 +138,21 @@ export const api = {
     needs: AccessNeed[] = [],
     todayNeeds: string[] = [],
     origin?: { lat: number; lng: number } | null,
-  ): Promise<RoutesResponse> {
-    return request<RoutesResponse>('/routes', {
+    /** 測試用：直接用座標指定終點，避免地址 geocode 每次跳到不同的點，方便重現測試案例 */
+    destCoords?: { lat: number; lng: number } | null,
+    /** 使用者明確講出來的出發點（例如「從政大到動物園」），有值就取代目前定位當起點 */
+    originText?: string,
+  ): Promise<RouteOption[]> {
+    // 後端負責呼叫 Google Routes API + 施工／無障礙資料，回傳排序後的路線。
+    // needs = 固定需求（輪椅/視障…），today = 今日需求（腳痠、想避開施工…）
+    return request<RouteOption[]>('/routes', {
       query: {
         destination,
         needs: needs.join(','),
         today: todayNeeds.join(','),
         ...(origin ? { originLat: origin.lat, originLng: origin.lng } : {}),
+        ...(destCoords ? { destLat: destCoords.lat, destLng: destCoords.lng } : {}),
+        ...(originText ? { origin: originText } : {}),
       },
     })
   },
