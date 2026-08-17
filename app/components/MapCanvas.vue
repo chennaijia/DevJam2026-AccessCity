@@ -11,8 +11,12 @@ const props = withDefaults(
     /** 拿來比較用的第二條路線（例如沒套用任何無障礙/施工考量的原始 Google 路線），用灰色虛線畫 */
     comparePolyline?: string
     markers?: { x: number; y: number; label?: string; tone?: 'teal' | 'red' | 'green' }[]
+    /** 施工地點——勾 Safety 時用吉祥物 icon 標示（IMG_4703.PNG） */
+    constructionMarkers?: { lat: number; lng: number; label?: string }[]
+    /** 輪行台北無障礙通行點——勾 Wheelchair 時用吉祥物 icon 標示（IMG_4704.PNG） */
+    facilityMarkers?: { lat: number; lng: number; label?: string }[]
   }>(),
-  { height: '220px', showPark: true, markers: () => [] },
+  { height: '220px', showPark: true, markers: () => [], constructionMarkers: () => [], facilityMarkers: () => [] },
 )
 
 const config = useRuntimeConfig()
@@ -22,6 +26,8 @@ let map: any
 let routeLine: any
 let compareLine: any
 let currentMarker: any
+let constructionMarkerObjs: any[] = []
+let facilityMarkerObjs: any[] = []
 
 declare global {
   interface Window {
@@ -90,6 +96,36 @@ function drawRoute(maps: any) {
   map.fitBounds(bounds, 44)
 }
 
+/** 用同一隻吉祥物 icon（不同圖檔）畫一組定點 marker，畫之前先清掉上一批 */
+function drawIconMarkers(
+  maps: any,
+  existing: any[],
+  points: { lat: number; lng: number; label?: string }[],
+  iconUrl: string,
+) {
+  existing.forEach((m) => m.setMap(null))
+  existing.length = 0
+  if (!map) return
+  for (const point of points) {
+    existing.push(
+      new maps.Marker({
+        map,
+        position: { lat: point.lat, lng: point.lng },
+        title: point.label,
+        icon: { url: iconUrl, scaledSize: new maps.Size(36, 36), anchor: new maps.Point(18, 32) },
+      }),
+    )
+  }
+}
+
+function drawConstructionMarkers(maps: any) {
+  drawIconMarkers(maps, constructionMarkerObjs, props.showConstruction ? props.constructionMarkers : [], '/IMG_4703.PNG')
+}
+
+function drawFacilityMarkers(maps: any) {
+  drawIconMarkers(maps, facilityMarkerObjs, props.facilityMarkers, '/IMG_4704.PNG')
+}
+
 function locateUser(maps: any) {
   if (!navigator.geolocation) return
   navigator.geolocation.getCurrentPosition(({ coords }) => {
@@ -116,6 +152,8 @@ onMounted(async () => {
       clickableIcons: false,
     })
     drawRoute(maps)
+    drawConstructionMarkers(maps)
+    drawFacilityMarkers(maps)
     locateUser(maps)
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : 'Google Maps 載入失敗'
@@ -129,10 +167,26 @@ watch(
   },
 )
 
+watch(
+  [() => props.constructionMarkers, () => props.showConstruction],
+  () => {
+    if (map && window.google?.maps) drawConstructionMarkers(window.google.maps)
+  },
+)
+
+watch(
+  () => props.facilityMarkers,
+  () => {
+    if (map && window.google?.maps) drawFacilityMarkers(window.google.maps)
+  },
+)
+
 onBeforeUnmount(() => {
   routeLine?.setMap(null)
   compareLine?.setMap(null)
   currentMarker?.setMap(null)
+  constructionMarkerObjs.forEach((m) => m.setMap(null))
+  facilityMarkerObjs.forEach((m) => m.setMap(null))
 })
 </script>
 

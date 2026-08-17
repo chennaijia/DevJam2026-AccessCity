@@ -9,7 +9,8 @@ export function usePlanning() {
   const chips = useState<RequirementChip[]>('accessity:chips', () => [])
   const routes = useState<RouteOption[]>('accessity:routes', () => [])
   const selectedRouteId = useState<string>('accessity:selected-route', () => '')
-  const todayNeeds = useState<string[]>('accessity:today-needs', () => [])
+  // 預設帶 wheelchair，對應首頁 Wheelchair 篩選器原本就預設勾選的樣子
+  const todayNeeds = useState<string[]>('accessity:today-needs', () => ['wheelchair'])
   const origin = useState<{ lat: number; lng: number } | null>('accessity:route-origin', () => null)
   /** 測試用：開了就不送帳號設定裡的固定 needs（例如輪椅），只送這次對話解析出的 chips，方便單獨測某一項 */
   const ignoreProfileNeeds = useState<boolean>('accessity:ignore-profile-needs', () => false)

@@ -136,6 +136,28 @@ export async function checkRouteAccessibilityCoverage(
   return { checked: true, coverage, sampleCount: inTaipei.length, missingCount }
 }
 
+/** 沿路線取樣，找出附近的已知無障礙通行點（斜坡道/出入口），地圖上顯示吉祥物 icon 用 */
+export async function findRouteAccessibilityFacilities(
+  encodedPolyline?: string,
+): Promise<{ lat: number; lng: number; name: string }[]> {
+  if (!encodedPolyline) return []
+
+  const points = samplePolyline(decodePolyline(encodedPolyline))
+  const inTaipei = points.filter(([lat, lon]) => isInTaipei(lat, lon))
+  if (inTaipei.length === 0) return []
+
+  const passablePoints = (await Promise.all(PASSABILITY_KINDS.map(getFacilities))).flat()
+  const nearby = new Map<string, { lat: number; lng: number; name: string }>()
+  for (const point of inTaipei) {
+    for (const p of passablePoints) {
+      if (haversineMeters(point, [p.lat, p.lon]) <= PASSABILITY_RADIUS_M) {
+        nearby.set(`${p.lat},${p.lon}`, { lat: p.lat, lng: p.lon, name: p.name || '無障礙通行點' })
+      }
+    }
+  }
+  return [...nearby.values()]
+}
+
 export interface NearbyFacility {
   name: string
   distanceMeters: number
