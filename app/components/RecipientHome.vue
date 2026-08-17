@@ -34,7 +34,6 @@ const needLabels: Record<AccessNeed, string> = {
   visual: '語音導航',
   other: '其他需求',
 }
-
 </script>
 
 <template>
@@ -55,7 +54,9 @@ const needLabels: Record<AccessNeed, string> = {
         <div>
           <div class="row" style="gap: 6px; color: var(--green-strong)">
             <AppIcon name="activity" :size="16" />
-            <span class="muted" style="color: var(--green-strong); font-weight: 700">行程進行中</span>
+            <span class="muted" style="color: var(--green-strong); font-weight: 700"
+              >行程進行中</span
+            >
           </div>
           <div class="title-md">{{ trip?.destination }}</div>
           <div class="muted">預計 {{ trip?.eta }} 抵達</div>
@@ -102,7 +103,7 @@ const needLabels: Record<AccessNeed, string> = {
       </button>
     </div>
 
-    <!-- 今日狀態（暫時性需求） -->
+    <!-- 今日狀態（暫時性需求）
     <div class="row-between">
       <span class="label">今天的身體狀況</span>
       <span class="muted">只影響今天</span>
@@ -118,7 +119,7 @@ const needLabels: Record<AccessNeed, string> = {
       >
         {{ opt.label }}
       </UiChip>
-    </div>
+    </div> -->
 
     <!-- 已儲存的需求 -->
     <div class="row-between">

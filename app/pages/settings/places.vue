@@ -95,7 +95,13 @@ function remove(place: SavedPlace) {
 
     <div class="label">已儲存的地址</div>
     <div class="stack">
-      <UiCard v-for="p in places" :key="p.id" padding="12px 14px" style="cursor: pointer" @click="openEdit(p)">
+      <UiCard
+        v-for="p in places"
+        :key="p.id"
+        padding="12px 14px"
+        style="cursor: pointer"
+        @click="openEdit(p)"
+      >
         <div class="row-between">
           <div class="row" style="gap: 10px">
             <AppIcon :name="p.icon" :size="18" />
@@ -114,7 +120,12 @@ function remove(place: SavedPlace) {
 
     <UiCard v-if="showForm" padding="14px 16px">
       <div class="label" style="margin-top: 0">{{ editingId ? '編輯地址' : '新增地址' }}</div>
-      <input v-model="form.label" class="field" placeholder="名稱，例如：家、公司" aria-label="名稱" />
+      <input
+        v-model="form.label"
+        class="field"
+        placeholder="名稱，例如：家、公司"
+        aria-label="名稱"
+      />
       <input v-model="form.address" class="field" placeholder="地址" aria-label="地址" />
       <div class="row" style="flex-wrap: wrap; margin: 8px 0">
         <UiChip

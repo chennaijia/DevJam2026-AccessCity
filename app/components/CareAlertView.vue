@@ -46,9 +46,7 @@ function respond(action: 'responding' | 'received') {
         <AppIcon v-if="responded" name="check" :size="18" />
         {{ responded ? '已回覆：我正在前往' : '我正在前往' }}
       </UiButton>
-      <UiButton variant="ghost" @click="respond('received')">
-        我知道了
-      </UiButton>
+      <UiButton variant="ghost" @click="respond('received')"> 我知道了 </UiButton>
     </div>
 
     <BottomNav />

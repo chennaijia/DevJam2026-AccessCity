@@ -36,7 +36,9 @@ export function useEmergencyAlert() {
 
     try {
       // 短促的兩聲提示音；瀏覽器要求使用者先與頁面互動過才會出聲
-      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      const Ctx =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
       if (!Ctx) return
       const ctx = new Ctx()
       const now = ctx.currentTime

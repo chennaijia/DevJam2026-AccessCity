@@ -3,7 +3,6 @@
  * AI Requirement Confirmation（企劃書 §6）
  * 使用者說一句話 → Requirement Agent 拆成 chips → 確認後才開始規劃路線。
  */
-<<<<<<< HEAD
 const {
   destination,
   chips,
@@ -11,15 +10,11 @@ const {
   routes,
   todayNeeds,
   ignoreProfileNeeds,
+  originPlace,
   resolveOrigin,
   runPlanning,
-  planning,
   planTrace,
 } = usePlanning()
-=======
-const { destination, chips, chipNeeds, routes, todayNeeds, ignoreProfileNeeds, originPlace, resolveOrigin } =
-  usePlanning()
->>>>>>> f9e1a2bde81a5faf89a12e6c30831c9dcdaa29f0
 const { user } = useSession()
 const route = useRoute()
 const { listen, listening, canListen, speak } = useSpeech()
@@ -48,7 +43,9 @@ const todayChips = computed(() =>
 )
 
 /** 有沒有真的解析出「目的地」，不是隨便把整句話當地點 */
-const hasDestination = computed(() => chips.value.some((c) => c.key === 'destination' && c.label.trim()))
+const hasDestination = computed(() =>
+  chips.value.some((c) => c.key === 'destination' && c.label.trim()),
+)
 
 /** origin 用下面獨立的欄位顯示/編輯，不要在需求 chips 裡重複出現一次 */
 const displayChips = computed(() => chips.value.filter((c) => c.key !== 'origin'))
@@ -86,29 +83,17 @@ async function startNavigation() {
   navError.value = ''
   navigating.value = true
   try {
-<<<<<<< HEAD
-    const origin = await resolveOrigin()
+    // 有明確講出發點就不用等定位（也不受定位失敗影響）
+    const origin = originPlace.value ? null : await resolveOrigin()
     await runPlanning({
       destination: destination.value,
       needs: ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
       origin,
+      originText: originPlace.value || undefined,
     })
 
     // 結果回來後先停一下，讓過程面板上的真實數字（幾個通行點、幾處施工）看得到再跳頁
     await new Promise((resolve) => setTimeout(resolve, 1200))
-=======
-    // TODO: 串接後端 —— GET /api/routes?destination=&needs=&today=
-    // 有明確講出發點就不用等定位（也不受定位失敗影響）
-    const origin = originPlace.value ? null : await resolveOrigin()
-    routes.value = await api.getRoutes(
-      destination.value,
-      ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
-      [...todayNeeds.value, ...chipNeeds.value],
-      origin,
-      null,
-      originPlace.value || undefined,
-    )
->>>>>>> f9e1a2bde81a5faf89a12e6c30831c9dcdaa29f0
     await navigateTo('/map/routes')
   } catch {
     navError.value = '找不到這個地點的路線，麻煩換個講法或確認地點名稱。'
@@ -206,7 +191,13 @@ if (initialDestination) await parse()
     <template v-else>
       <div class="label">AI 解析出的需求</div>
       <div class="row" style="flex-wrap: wrap">
-        <UiChip v-for="c in displayChips" :key="c.key" tone="green" as="button" @click="removeChip(c.key)">
+        <UiChip
+          v-for="c in displayChips"
+          :key="c.key"
+          tone="green"
+          as="button"
+          @click="removeChip(c.key)"
+        >
           {{ c.label }} ✕
         </UiChip>
       </div>
@@ -232,7 +223,8 @@ if (initialDestination) await parse()
     <BottomNav />
 
     <!-- 規劃過程：讓人看得到系統怎麼算的 -->
-    <PlanningProgress :open="planning" :trace="planTrace" />
+    <!-- navigating 會持續到結果展示完才結束；若只綁 planning，trace 一回來面板就會立刻關閉。 -->
+    <PlanningProgress :open="navigating" :trace="planTrace" />
   </section>
 </template>
 

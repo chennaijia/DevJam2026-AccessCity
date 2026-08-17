@@ -52,7 +52,12 @@ function submit() {
 
     <div class="label">補充說明</div>
     <UiCard padding="14px 16px">
-      <textarea v-model="note" class="note-input" rows="4" placeholder="例如：人行道被圍籬擋住，只能繞到對面。" />
+      <textarea
+        v-model="note"
+        class="note-input"
+        rows="4"
+        placeholder="例如：人行道被圍籬擋住，只能繞到對面。"
+      />
     </UiCard>
 
     <!-- TODO: 串接檔案上傳 —— POST /api/reports/photo（multipart） -->

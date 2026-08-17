@@ -29,22 +29,20 @@ const testOriginLat = Number(testQuery.originLat)
 const testOriginLng = Number(testQuery.originLng)
 const hasTestOrigin = Number.isFinite(testOriginLat) && Number.isFinite(testOriginLng)
 
+// 直接開這頁（重新整理或測試網址）時補算一次；走 runPlanning 才會一併收到規劃過程
 if (!routes.value.length) {
-  // TODO: 串接後端 —— GET /api/routes?destination=&needs=
-  routes.value = await api.getRoutes(
-    (testQuery.destination as string) || destination.value || '台大醫院',
-    testQuery.needs
+  await runPlanning({
+    destination: (testQuery.destination as string) || destination.value || '台大醫院',
+    needs: testQuery.needs
       ? (String(testQuery.needs).split(',') as AccessNeed[])
       : ignoreProfileNeeds.value
         ? []
         : (user.value?.needs ?? []),
-    testQuery.today
-      ? String(testQuery.today).split(',')
-      : [...todayNeeds.value, ...chipNeeds.value],
-    hasTestOrigin ? { lat: testOriginLat, lng: testOriginLng } : origin.value,
-    hasTestDest ? { lat: testDestLat, lng: testDestLng } : null,
-    (testQuery.origin as string) || originPlace.value || undefined,
-  )
+    origin: hasTestOrigin ? { lat: testOriginLat, lng: testOriginLng } : origin.value,
+    destCoords: hasTestDest ? { lat: testDestLat, lng: testDestLng } : null,
+    originText: (testQuery.origin as string) || originPlace.value || undefined,
+    todayOverride: testQuery.today ? String(testQuery.today).split(',') : undefined,
+  })
 }
 selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''
 

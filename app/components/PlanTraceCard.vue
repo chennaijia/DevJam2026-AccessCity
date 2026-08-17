@@ -7,7 +7,8 @@ import type { PlanTraceStep } from '#shared/types/accessity'
 
 const props = defineProps<{ trace: PlanTraceStep[] }>()
 
-const open = ref(false)
+// demo 時預設展開，評審一眼就看得到系統做了哪些事
+const open = ref(true)
 const totalMs = computed(() => props.trace.reduce((sum, step) => sum + step.ms, 0))
 const doneCount = computed(() => props.trace.filter((s) => s.status === 'done').length)
 </script>
@@ -84,6 +85,10 @@ const doneCount = computed(() => props.trace.filter((s) => s.status === 'done').
   gap: 10px;
 }
 
+.item > .grow {
+  min-width: 0;
+}
+
 .dot {
   flex: none;
   width: 20px;
@@ -126,6 +131,8 @@ const doneCount = computed(() => props.trace.filter((s) => s.status === 'done').
 
 .logs {
   display: block;
+  width: 100%;
+  max-width: 100%;
   margin-top: 6px;
   padding: 8px 10px;
   border-radius: 8px;
@@ -134,12 +141,14 @@ const doneCount = computed(() => props.trace.filter((s) => s.status === 'done').
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10.5px;
   line-height: 1.7;
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 .log {
   display: block;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .ms {

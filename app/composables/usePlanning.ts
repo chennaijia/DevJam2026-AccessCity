@@ -59,6 +59,12 @@ export function usePlanning() {
     destination: string
     needs?: string[]
     origin?: { lat: number; lng: number } | null
+    /** 測試用：直接指定終點座標 */
+    destCoords?: { lat: number; lng: number } | null
+    /** 使用者明確講出來的出發點（例如「從政大到動物園」） */
+    originText?: string
+    /** 測試網址可以直接指定今日需求，不動使用者的設定 */
+    todayOverride?: string[]
   }) {
     planning.value = true
     planTrace.value = []
@@ -66,8 +72,10 @@ export function usePlanning() {
       const result = await api.getRoutes(
         options.destination,
         (options.needs ?? []) as never,
-        todayNeeds.value,
+        options.todayOverride ?? [...todayNeeds.value, ...chipNeeds.value],
         options.origin ?? null,
+        options.destCoords ?? null,
+        options.originText,
       )
       routes.value = result.routes
       planTrace.value = result.trace

@@ -142,10 +142,11 @@ export const api = {
     destCoords?: { lat: number; lng: number } | null,
     /** 使用者明確講出來的出發點（例如「從政大到動物園」），有值就取代目前定位當起點 */
     originText?: string,
-  ): Promise<RouteOption[]> {
-    // 後端負責呼叫 Google Routes API + 施工／無障礙資料，回傳排序後的路線。
+  ): Promise<RoutesResponse> {
+    // 後端負責呼叫 Google Routes API + 施工／無障礙資料，回傳排序後的路線，
+    // 以及 trace（每一步呼叫了什麼、抓到幾筆、比對結果），前端用來顯示規劃過程。
     // needs = 固定需求（輪椅/視障…），today = 今日需求（腳痠、想避開施工…）
-    return request<RouteOption[]>('/routes', {
+    return request<RoutesResponse>('/routes', {
       query: {
         destination,
         needs: needs.join(','),

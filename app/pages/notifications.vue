@@ -32,12 +32,7 @@ function open(id: string, to?: string) {
         <h2 class="title-xl">通知</h2>
         <p class="body">{{ unread.length ? `有 ${unread.length} 則還沒看` : '都看過了' }}</p>
       </div>
-      <UiButton
-        v-if="unread.length"
-        variant="quiet"
-        :block="false"
-        @click="markAllRead"
-      >
+      <UiButton v-if="unread.length" variant="quiet" :block="false" @click="markAllRead">
         全部已讀
       </UiButton>
     </div>
@@ -59,7 +54,7 @@ function open(id: string, to?: string) {
     >
       <div class="row" style="align-items: flex-start; gap: 12px">
         <span class="dot" :class="`dot--${n.kind}`">
-          <AppIcon :name="(iconOf[n.kind] as never)" :size="17" />
+          <AppIcon :name="iconOf[n.kind] as never" :size="17" />
         </span>
         <div class="grow">
           <div class="row-between">

@@ -60,7 +60,11 @@ function stateOf(key: string, index: number) {
         <MimoMascot :size="64" />
         <h2 class="title-lg center">{{ finished ? '規劃完成' : '正在幫你規劃路線' }}</h2>
         <p class="muted center">
-          {{ finished ? `共 ${totalMs} 毫秒，資料來源都列在下面` : '依你的需求逐項確認，找出真的走得到的路' }}
+          {{
+            finished
+              ? `共 ${totalMs} 毫秒，資料來源都列在下面`
+              : '依你的需求逐項確認，找出真的走得到的路'
+          }}
         </p>
 
         <ol class="steps">
@@ -148,6 +152,10 @@ function stateOf(key: string, index: number) {
   transition: background 0.2s ease;
 }
 
+.step > .grow {
+  min-width: 0;
+}
+
 .step--running {
   background: var(--teal-tint);
 }
@@ -222,6 +230,8 @@ function stateOf(key: string, index: number) {
 
 .step__logs {
   display: block;
+  width: 100%;
+  max-width: 100%;
   margin-top: 4px;
   padding: 6px 8px;
   border-radius: 6px;
@@ -236,8 +246,9 @@ function stateOf(key: string, index: number) {
 
 .step__log {
   display: block;
-  white-space: pre;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .step__ms {

@@ -130,9 +130,7 @@ defineExpose({ openSos, askCheckin })
       title="你還好嗎？"
       message="你在同一個地方停留超過 15 分鐘了，需要幫忙嗎？"
     >
-      <p class="countdown">
-        {{ remaining }} 秒內沒有回覆的話，我會幫你通知照顧者
-      </p>
+      <p class="countdown">{{ remaining }} 秒內沒有回覆的話，我會幫你通知照顧者</p>
       <UiButton variant="green" @click="answerCheckin('ok')">我沒事</UiButton>
       <UiButton variant="danger" @click="answerCheckin('need-help')">我需要幫忙</UiButton>
     </ModalDialog>
