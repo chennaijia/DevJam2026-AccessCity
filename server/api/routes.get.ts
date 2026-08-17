@@ -243,16 +243,20 @@ export default defineEventHandler(async (event): Promise<RouteOption[]> => {
     Number.isFinite(lat) &&
     Number.isFinite(lng)
   const fallbackOrigin = String(config.googleRoutesOrigin || '').trim()
-  if (!hasCoordinates && !fallbackOrigin) {
+  // 使用者明確講出來的出發點（例如「從政大到動物園」）優先於定位，不用等 GPS 也不受定位失敗影響
+  const originText = query.origin?.trim()
+  if (!originText && !hasCoordinates && !fallbackOrigin) {
     throw createError({
       statusCode: 400,
       statusMessage: '無法取得起點，請允許定位或設定 GOOGLE_ROUTES_ORIGIN',
     })
   }
 
-  const origin: GoogleOrigin = hasCoordinates
-    ? { location: { latLng: { latitude: lat, longitude: lng } } }
-    : { address: fallbackOrigin }
+  const origin: GoogleOrigin = originText
+    ? { address: originText }
+    : hasCoordinates
+      ? { location: { latLng: { latitude: lat, longitude: lng } } }
+      : { address: fallbackOrigin }
   const apiKey = String(config.googleRoutesApiKey)
 
   // 開發/測試用：destLat+destLng 可以直接用座標指定終點，避免地址 geocode 每次跳到不同的點，方便重現測試

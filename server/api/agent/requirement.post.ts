@@ -9,6 +9,10 @@ const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
     destination: { type: Type.STRING, description: '使用者想去的地點，沒有提到就留空字串' },
+    origin: {
+      type: Type.STRING,
+      description: '使用者指定的出發點（例如「從政大到動物園」的「政大」），沒有明確指定就留空字串，不要用目的地或當前位置頂替',
+    },
     constraints: {
       type: Type.ARRAY,
       items: {
@@ -24,13 +28,15 @@ const RESPONSE_SCHEMA = {
       },
     },
   },
-  required: ['destination', 'constraints'],
+  required: ['destination', 'origin', 'constraints'],
 }
 
 const SYSTEM_INSTRUCTION = `你是無障礙導航 App「Accessity」裡 Mimo 助理的需求解析模組。
 從使用者的中文口語描述中解析出：
 1. destination：想去的地點（沒提到就回空字串）
-2. constraints：無障礙 / 行動 / 路況相關的限制，每一個都用 key + 中文短標籤描述
+2. origin：使用者明確指定的出發點，例如「從政大到動物園」要抓出「政大」；
+   使用者沒有明確講「從/由 XX 出發」這種句型的話，origin 一律留空字串，讓系統用目前定位當起點，不要自己腦補一個出發點。
+3. constraints：無障礙 / 行動 / 路況相關的限制，每一個都用 key + 中文短標籤描述
    - wheelchair：需要輪椅可通行的無障礙路線
    - mobility：行動不便、容易累，需要少走路 / 多休息
    - avoid-construction：想避開施工或封路路段
@@ -48,9 +54,14 @@ const FALLBACK_RULES: { match: RegExp; chip: RequirementChip }[] = [
 ]
 
 function fallbackParse(input: string): RequirementChip[] {
-  const destination = input.match(/(?:去|到)\s*([^\s，,。的]+)/)?.[1]
+  // 先抓「從/由 A 到/去 B」，抓不到再退回只抓目的地
+  const fromTo = input.match(/(?:從|由)\s*([^\s，,。]+?)\s*(?:去|到)\s*([^\s，,。的]+)/)
+  const origin = fromTo?.[1]
+  const destination = fromTo?.[2] ?? input.match(/(?:去|到)\s*([^\s，,。的]+)/)?.[1]
+
   const chips: RequirementChip[] = []
   if (destination) chips.push({ key: 'destination', label: destination })
+  if (origin) chips.push({ key: 'origin', label: origin })
   for (const rule of FALLBACK_RULES) {
     if (rule.match.test(input)) chips.push(rule.chip)
   }
@@ -82,11 +93,13 @@ export default defineEventHandler(async (event): Promise<RequirementChip[]> => {
 
     const parsed = JSON.parse(result.text ?? '{}') as {
       destination?: string
+      origin?: string
       constraints?: RequirementChip[]
     }
 
     const chips: RequirementChip[] = []
     if (parsed.destination) chips.push({ key: 'destination', label: parsed.destination })
+    if (parsed.origin) chips.push({ key: 'origin', label: parsed.origin })
     if (Array.isArray(parsed.constraints)) chips.push(...parsed.constraints)
     return chips
   } catch (err) {

@@ -3,7 +3,8 @@
  * AI Requirement Confirmation（企劃書 §6）
  * 使用者說一句話 → Requirement Agent 拆成 chips → 確認後才開始規劃路線。
  */
-const { destination, chips, chipNeeds, routes, todayNeeds, ignoreProfileNeeds, resolveOrigin } = usePlanning()
+const { destination, chips, chipNeeds, routes, todayNeeds, ignoreProfileNeeds, originPlace, resolveOrigin } =
+  usePlanning()
 const { user } = useSession()
 const route = useRoute()
 const { listen, listening, canListen, speak } = useSpeech()
@@ -44,6 +45,8 @@ async function parse() {
     // 沒解析出目的地就不要硬把整句話當成地點——不然「輪椅」這種沒提到地點的話會被拿去查地址
     const destinationChip = chips.value.find((c) => c.key === 'destination')?.label
     if (destinationChip) destination.value = destinationChip
+    // 有明確講出發點（「從政大到動物園」）才覆蓋，沒講就維持用目前定位
+    originPlace.value = chips.value.find((c) => c.key === 'origin')?.label ?? ''
     parsed.value = true
   } finally {
     loading.value = false
@@ -52,6 +55,7 @@ async function parse() {
 
 function removeChip(key: string) {
   chips.value = chips.value.filter((c) => c.key !== key)
+  if (key === 'origin') originPlace.value = ''
 }
 
 async function startNavigation() {
@@ -64,12 +68,15 @@ async function startNavigation() {
   navigating.value = true
   try {
     // TODO: 串接後端 —— GET /api/routes?destination=&needs=&today=
-    const origin = await resolveOrigin()
+    // 有明確講出發點就不用等定位（也不受定位失敗影響）
+    const origin = originPlace.value ? null : await resolveOrigin()
     routes.value = await api.getRoutes(
       destination.value,
       ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
       [...todayNeeds.value, ...chipNeeds.value],
       origin,
+      null,
+      originPlace.value || undefined,
     )
     await navigateTo('/map/routes')
   } catch {
@@ -160,7 +167,7 @@ if (initialDestination) await parse()
       <div class="label">AI 解析出的需求</div>
       <div class="row" style="flex-wrap: wrap">
         <UiChip v-for="c in chips" :key="c.key" tone="green" as="button" @click="removeChip(c.key)">
-          {{ c.label }} ✕
+          {{ c.key === 'origin' ? `從 ${c.label} 出發` : c.label }} ✕
         </UiChip>
       </div>
 

@@ -1,15 +1,40 @@
 <script setup lang="ts">
-const { destination, routes, selectedRouteId, selectedRoute, todayNeeds, chipNeeds, ignoreProfileNeeds, origin } =
-  usePlanning()
+const {
+  destination,
+  routes,
+  selectedRouteId,
+  selectedRoute,
+  todayNeeds,
+  chipNeeds,
+  ignoreProfileNeeds,
+  origin,
+  originPlace,
+} = usePlanning()
 const { user } = useSession()
+const testQuery = useRoute().query
+
+/**
+ * 測試用：網址可以直接帶 destLat/destLng（+ originLat/originLng、needs、today）
+ * 蓋掉正常流程解析出來的目的地/需求，方便重現特定測試案例，不用透過 Mimo 對話走一輪。
+ * 例：/map/routes?destLat=25.0197&destLng=121.5580&originLat=25.0161&originLng=121.5576&needs=avoid-construction
+ */
+const testDestLat = Number(testQuery.destLat)
+const testDestLng = Number(testQuery.destLng)
+const hasTestDest = Number.isFinite(testDestLat) && Number.isFinite(testDestLng)
+
+const testOriginLat = Number(testQuery.originLat)
+const testOriginLng = Number(testQuery.originLng)
+const hasTestOrigin = Number.isFinite(testOriginLat) && Number.isFinite(testOriginLng)
 
 if (!routes.value.length) {
   // TODO: 串接後端 —— GET /api/routes?destination=&needs=
   routes.value = await api.getRoutes(
-    destination.value || '台大醫院',
-    ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
-    [...todayNeeds.value, ...chipNeeds.value],
-    origin.value,
+    (testQuery.destination as string) || destination.value || '台大醫院',
+    testQuery.needs ? (String(testQuery.needs).split(',') as AccessNeed[]) : ignoreProfileNeeds.value ? [] : (user.value?.needs ?? []),
+    testQuery.today ? String(testQuery.today).split(',') : [...todayNeeds.value, ...chipNeeds.value],
+    hasTestOrigin ? { lat: testOriginLat, lng: testOriginLng } : origin.value,
+    hasTestDest ? { lat: testDestLat, lng: testDestLng } : null,
+    (testQuery.origin as string) || originPlace.value || undefined,
   )
 }
 selectedRouteId.value ||= routes.value.find((r) => r.badge === 'recommended')?.id ?? ''

@@ -164,6 +164,10 @@ export const api = {
     needs: AccessNeed[] = [],
     todayNeeds: string[] = [],
     origin?: { lat: number; lng: number } | null,
+    /** 測試用：直接用座標指定終點，避免地址 geocode 每次跳到不同的點，方便重現測試案例 */
+    destCoords?: { lat: number; lng: number } | null,
+    /** 使用者明確講出來的出發點（例如「從政大到動物園」），有值就取代目前定位當起點 */
+    originText?: string,
   ): Promise<RouteOption[]> {
     // TODO: 串接後端 —— GET /api/routes?destination=&needs=&today=
     //       後端負責呼叫 Google Routes API + 施工／無障礙資料，回傳排序後的路線。
@@ -175,6 +179,8 @@ export const api = {
           needs: needs.join(','),
           today: todayNeeds.join(','),
           ...(origin ? { originLat: origin.lat, originLng: origin.lng } : {}),
+          ...(destCoords ? { destLat: destCoords.lat, destLng: destCoords.lng } : {}),
+          ...(originText ? { origin: originText } : {}),
         },
       })
     return mock(mockRoutes, 400)
