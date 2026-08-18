@@ -1,4 +1,4 @@
-# AccessCity / Accessity
+# AccessCity
 
 **AI-powered Accessible Navigation & Care Companion**
 _Navigate → Assist → Care_
