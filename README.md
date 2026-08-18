@@ -4,7 +4,6 @@
 _Navigate → Assist → Care_
 
 Nuxt 4（Vue 3）前端 + Nitro（`server/api`）簡易後端。
-前端目前全部走**模擬資料**，所有要接後端的位置都以 `// TODO:` 標註。
 
 ---
 
@@ -155,10 +154,10 @@ Demo 想切換成照顧者：用 `naijia@example.com` 登入（後端 `POST /api
 所有 API 呼叫都集中在 [`app/composables/useApi.ts`](app/composables/useApi.ts)：
 
 ```ts
-const USE_MOCK = true // ← 後端好了就改成 false
+const USE_MOCK = true 
 
 async getRoutes(destination, needs) {
-  // TODO: 串接後端 —— GET /api/routes?destination=&needs=
+  // 串接後端 GET /api/routes?destination=&needs=
   if (!USE_MOCK) return request<RouteOption[]>('/routes', { query: { destination, needs } })
   return mock(mockRoutes)
 }
@@ -168,34 +167,6 @@ async getRoutes(destination, needs) {
 - `USE_MOCK = false`：改打 `server/api/**` 的真實 endpoint（已經全部實作好，介面一致）。
 - 需要 token / 錯誤處理時，改 `useApi.ts` 裡的 `request()` 一處即可。
 
-### 企劃書對照
-
-| 企劃書項目 | 現況 |
-| --- | --- |
-| §4.1 AI 需求輸入（文字／語音／快捷） | ✅ Gemini Requirement Agent + Web Speech 語音輸入 + 範例句 |
-| §4.2 固定需求 / 今日需求 | ✅ 帳號上的固定需求 + 首頁的今日狀況（當天有效） |
-| §4.3 Google Maps 導航 | ⚠️ 尚未串接（缺 API key），目前是 `MapCanvas` 示意底圖 |
-| §4.4 施工感知導航 | ✅ 後端 `routes.get.ts` 用施工資料做路段比對、重新排序並產生推薦理由 |
-| §4.5 Voice-first | ✅ TTS 逐步播報 + Replay（再聽一次）+ Help（需要協助）+ 大按鈕 |
-| §4.6 Care Dashboard | ✅ On trip / Destination / ETA / 即時位置 / Trip Timeline（成員詳情） |
-| §4.7 Detect → Ask → Wait → Escalate | ✅ 停留詢問 + 倒數等待 + 逾時自動升級 Care Alert |
-| §5 三個 Agent | ✅ Requirement（Gemini）／Navigation（施工比對）／Care（Check-in 升級） |
-| §6 被照顧者 Home / 導航畫面 | ✅ 現在位置、常用地點、已儲存需求、最近行程、施工標示 |
-| §7 照顧者 Dashboard | ✅ 提醒中心、成員切換、即時位置、統計 |
-
-剩下最大的一項是 **Google Maps 串接**：`nuxt.config.ts` 已留 `googleMapsKey`，
-把 `MapCanvas` 換成 Google Maps JS API、路線改用 Routes API 的 polyline 即可。
-
-其他 `TODO` 標註的整合點：
-
-- **Google Maps**：`app/components/MapCanvas.vue`（目前是 CSS + SVG 示意底圖）、`nuxt.config.ts` 的 `googleMapsKey`。
-- **語音**：`app/pages/map/index.vue`、`app/pages/mimo.vue`（STT）、`app/pages/map/navigate.vue`（TTS 播報）。
-- **LLM**：`server/api/agent/requirement.post.ts`（目前是關鍵字規則，之後換成 Claude Messages API 的結構化輸出）。
-- **推播 / 即時更新**：`server/api/alerts/*`、`app/pages/caregiver/*`（目前是輪詢式 `useAsyncData`，正式版建議 SSE 或推播）。
-- **Mimo 角色圖**：正式插畫在 `public/mimo.png`（384px，大尺寸用）與 `public/mimo-icon.png`（96px，小頭像／favicon 用），
-  由 `app/components/MimoMascot.vue` 依 size 自動挑檔；要換角色圖直接換這兩個檔案。
-
----
 
 ## 後端 API 一覽（`server/api`）
 
@@ -239,5 +210,3 @@ async getRoutes(destination, needs) {
 | GET    | `/api/settings/notifications`     | 通知設定                         |
 | PATCH  | `/api/settings/notifications`     | 更新通知設定                     |
 
-後端資料存在 `server/utils/store.ts` 的記憶體物件，重啟即回到初始狀態；
-要換成真的資料庫時，只需替換這個檔案並保持 handler 介面不變。
